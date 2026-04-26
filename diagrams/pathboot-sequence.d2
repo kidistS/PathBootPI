@@ -1,0 +1,129 @@
+################################################################################
+# PathBoot PI – Sequence Diagram  (concise)
+# Paste at: https://play.d2lang.com
+################################################################################
+
+shape: sequence_diagram
+
+# Actors
+Client
+Controller: ChatController
+Facade:     ChatFacadeService
+LangUtil:   LanguageDetectionUtil
+Translator: TranslationService
+Classifier: DomainClassificationService
+Agent:      DomainAgent
+Cache:      Caffeine Cache
+RAG:        RagGroundingService
+Mistral:    Mistral (Ollama)
+Session:    UserSessionManager
+SQLite:     SQLite DB
+
+# ① Receive
+group {
+  label: "① Request"
+  Client     -> Controller: "POST /api/v1/chat"
+  Controller -> Facade:     "processChat(request)"
+}
+
+# ② Detect language
+group {
+  label: "② Detect Language"
+  Facade   -> LangUtil: "detectLanguage(input)"
+  LangUtil -> Facade:   "→ EN | NO | AM"
+}
+
+# ③ Translate input (alt)
+group {
+  label: "③ alt: Translate Input to English"
+  group {
+    label: "[EN]  pass through"
+    Facade -> Facade: "englishInput = input"
+  }
+  group {
+    label: "[NO]  Ollama / Mistral"
+    Facade     -> Translator: "translateToEnglish(NO)"
+    Translator -> Mistral:    "chat(translatePrompt)"
+    Mistral    -> Facade:     "→ englishInput"
+  }
+  group {
+    label: "[AM]  NLLB-200"
+    Facade     -> Translator: "translateToEnglish(AM)"
+    Translator -> Translator: "POST /translate  amh→eng"
+    Translator -> Facade:     "→ englishInput"
+  }
+}
+
+# ④ Classify domain
+group {
+  label: "④ Classify Domain"
+  Facade     -> Classifier: "classifyDomain(englishInput)"
+  Classifier -> Mistral:    "chat(classificationPrompt)"
+  Mistral    -> Facade:     "→ TAX | NAV | IMMIGRATION"
+}
+
+# ⑤ Load session
+group {
+  label: "⑤ Load Session"
+  Facade  -> Session: "getOrCreate(sessionId)"
+  Session -> SQLite:  "SELECT user_sessions  [cold]"
+  SQLite  -> Facade:  "→ conversationHistory[]"
+}
+
+# ⑥ Answer (alt: cache hit / miss)
+group {
+  label: "⑥ alt: Generate Answer"
+  group {
+    label: "[HIT]  return cached answer"
+    Agent -> Cache:  "look-up  key: domain+lang+question"
+    Cache -> Facade: "→ cachedAnswer"
+  }
+  group {
+    label: "[MISS]  RAG + LLM"
+    Agent   -> RAG:     "findRelevantContext(input, domain)"
+    RAG     -> RAG:     "embed → search → topK=3 chunks"
+    RAG     -> Agent:   "→ [ chunk1, chunk2, chunk3 ]"
+    Agent   -> Mistral: "chat(prompt + RAG + history)"
+    Mistral -> Agent:   "→ englishAnswer"
+    Agent   -> Cache:   "store(key, answer)"
+    Agent   -> Facade:  "→ englishAnswer"
+  }
+}
+
+# ⑦ Back-translate (alt)
+group {
+  label: "⑦ alt: Back-Translate Answer"
+  group {
+    label: "[EN]  no-op"
+    Facade -> Facade: "finalAnswer = englishAnswer"
+  }
+  group {
+    label: "[NO]  Ollama / Mistral"
+    Facade     -> Translator: "translateFromEnglish(NO)"
+    Translator -> Mistral:    "chat(translatePrompt)"
+    Mistral    -> Facade:     "→ finalAnswer (NO)"
+  }
+  group {
+    label: "[AM]  NLLB-200"
+    Facade     -> Translator: "translateFromEnglish(AM)"
+    Translator -> Translator: "POST /translate  eng→amh"
+    Translator -> Facade:     "→ finalAnswer (AM)"
+  }
+}
+
+# ⑧ Persist async + respond
+group {
+  label: "⑧ par: Persist & Respond"
+  group {
+    label: "[async]  save session"
+    Facade -> Session: "@Async persistSession()"
+    Session -> SQLite: "INSERT / UPDATE user_sessions"
+  }
+  group {
+    label: "[main]  return"
+    Facade     -> Controller: "ChatResponse { responseText, sessionId, ... }"
+    Controller -> Client:     "HTTP 200 OK"
+  }
+}
+
+

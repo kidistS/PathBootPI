@@ -1,0 +1,89 @@
+spring:
+  application:
+    name: pathboot-pi
+  profiles:
+    active: local
+  # ─── SQLite Persistent Database ─────────────────────────────────────────────
+  datasource:
+    url: jdbc:sqlite:./data/pathboot-data.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      # SQLite supports only one writer at a time. A pool of 1 serialises all writes
+      # through HikariCP's own queue, eliminating SQLITE_BUSY "database is locked" errors.
+      maximum-pool-size: 1
+      minimum-idle: 1
+      # WAL mode allows concurrent readers while one writer is active.
+      # busy_timeout=30000 makes SQLite wait up to 30 s for the write lock instead of
+      # failing immediately with SQLITE_BUSY.
+      connection-init-sql: "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000; PRAGMA synchronous=NORMAL;"
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update            # creates tables on first run, preserves data on restart
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        # SQLite does not support sequence-based generation; IDENTITY uses rowid autoincrement
+        jakarta.persistence.schema-generation.database.action: none
+  # ─── Cache (Caffeine in-memory) ──────────────────────────────────────────────
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=60m
+  # ─── Spring AI – Ollama / Mistral ───────────────────────────────────────────
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: mistral
+          temperature: 0.1      # lower = faster, more deterministic (factual QA needs no creativity)
+          num-predict: 200      # "2-3 sentences" rarely exceeds 150 tokens; cap prevents runaway output
+          num-ctx: 1024         # RAG top-3 chunks + question fits in 1 k tokens; halves attention cost vs 2048
+          keep-alive: "-1m"     # NEVER unload model from RAM – eliminates the 5-15 s cold-start on every idle request
+      # Embedding model for RAG vector store (uses same Ollama instance)
+      # Pull with: ollama pull nomic-embed-text
+      # Falls back gracefully if not available
+      embedding:
+        options:
+          model: nomic-embed-text
+# ─── NLLB Translation Server (local Python) ────────────────────────────────
+nllb:
+  server:
+    base-url: http://localhost:5000
+    translate-endpoint: /translate
+    connect-timeout-ms: 5000
+    read-timeout-ms: 120000   # 2 min – NLLB-600M on CPU can take 30-90 s on first call
+# ─── RAG Vector Store ─────────────────────────────────────────────────────────
+rag:
+  top-k: 3                         # number of relevant chunks returned per query
+  chunk-min-length: 30             # ignore chunks shorter than this (headers/blanks)
+  enabled: true                    # set false to fall back to full grounding file
+  store-path: ./data/vector-store.json  # persisted embeddings – loaded on restart, built on first run
+# ─── Server ─────────────────────────────────────────────────────────────────
+server:
+  port: 8080
+  error:
+    include-message: never          # do not leak internal exception messages to clients
+    include-binding-errors: never   # validation details returned by GlobalExceptionHandler instead
+# ─── Springdoc / Swagger ─────────────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    display-request-duration: true
+# ─── Actuator ────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized   # avoid exposing DB/disk details publicly
+# ─── Logging (Log4j2 – see log4j2.xml for full config) ────────────────────
+logging:
+  config: classpath:log4j2.xml

@@ -1,0 +1,122 @@
+# NAV – Norwegian Labour and Welfare Administration – Domain Grounding Data
+# Source: NAV (www.nav.no) – for educational/demo use only
+
+## OVERVIEW
+NAV (Arbeids- og velferdsetaten) is the Norwegian Labour and Welfare Administration.
+It manages approximately one-third of Norway's national budget through schemes such as
+unemployment benefits, parental leave, sick pay, disability benefit, and pensions.
+
+---
+
+## UNEMPLOYMENT BENEFITS (DAGPENGER)
+
+### Eligibility
+- You must be registered as a job-seeker at NAV before receiving dagpenger.
+- You must have earned at least NOK 177,394 in the last 12 months, OR NOK 354,788 in
+  the last 36 months (2024 figures).
+- You must be a genuine job-seeker and available for work.
+
+### Amount
+- 62.4% of your average income over the last 12 or 36 months, up to a maximum of
+  6 × the National Insurance Basic Amount (Grunnbeløp, G).
+- Maximum daily rate: approximately NOK 778 per day (2024).
+
+### Duration
+- Up to 104 weeks (approximately 2 years) if you earned more than 2G in the preceding year.
+- Up to 52 weeks if you earned between 0.5G and 2G.
+
+### How to Apply
+1. Register as a job-seeker at nav.no.
+2. Submit the dagpenger application online (søknad om dagpenger) at nav.no.
+3. Send bi-weekly activity reports (meldekort).
+4. Payment is made every two weeks.
+
+---
+
+## SICK PAY (SYKEPENGER)
+
+### Employee Entitlement
+- 100% of your salary from day 1 of sick leave, paid by your employer for the first
+  16 calendar days (arbeidsgiverperioden).
+- From day 17, NAV pays sykepenger up to 6G per year (≈ NOK 711,720 in 2024).
+- Maximum duration: 52 weeks within a 3-year period.
+
+### Self-Employed Sick Pay
+- Self-employed persons are entitled to sykepenger from day 17 at 80% of their income
+  (up to 6G), unless they have purchased additional insurance.
+
+### Sick Note (Sykemelding)
+- Medical certificate from a doctor is required if illness lasts more than 3 days
+  (employees may use self-certification – egenmelding – for up to 3 days, or up
+  to 24 days if the employer has joined the IA (Inclusive Workplace) scheme).
+
+---
+
+## PARENTAL LEAVE (FORELDREPENGER / SVANGERSKAPSPENGER)
+
+- Total parental leave: 49 weeks at 100% pay OR 59 weeks at 80% pay.
+- Mother's quota: 15 weeks (minimum); Father's/second parent quota: 15 weeks.
+- Remaining weeks are shared.
+- Both parents must have worked for 6 of the last 10 months before birth.
+
+---
+
+## DISABILITY BENEFIT (UFØRETRYGD)
+
+### Eligibility
+- Reduced work capacity by at least 50% due to illness or injury.
+- Must have exhausted sick leave and work assessment allowance (AAP) first.
+
+### Amount
+- Approximately 66% of previous income (up to 6G).
+- Disability benefit is taxable income.
+
+---
+
+## WORK ASSESSMENT ALLOWANCE (AAP – ARBEIDSAVKLARINGSPENGER)
+
+- Bridge between sick pay and work or disability benefit.
+- Requires that your work capacity is reduced by at least 50% due to illness.
+- 66% of previous income, minimum NOK 285,836 per year (2024).
+- Maximum duration: typically 3 years (extendable in special circumstances).
+
+---
+
+## OLD-AGE PENSION (ALDERSPENSJON)
+
+- Flexible withdrawal from age 62 (if you have earned enough pension rights).
+- Full state pension available from age 67.
+- Pension depends on lifetime employment income; maximum is approximately 18.1% of
+  annual income up to 7.1G per earning year.
+
+---
+
+## HOW TO CONTACT / USE NAV
+
+- Website: nav.no
+- Personal service: Ditt NAV (My NAV) – log in with BankID or MinID.
+- Local NAV office: every municipality has a NAV office for in-person help.
+- Phone: 55 55 33 33
+
+---
+
+## COMMON NAV QUESTIONS
+
+Q: How do I register as a job-seeker?
+A: Log in at nav.no with BankID or MinID, go to 'Ditt NAV', and complete the job-seeker
+   registration form. You must do this before applying for dagpenger.
+
+Q: I just lost my job. What should I do first?
+A: Register as a job-seeker at nav.no immediately, then submit a dagpenger (unemployment
+   benefit) application. Deadline: you can apply up to 14 days before your last working day.
+
+Q: As a new immigrant, am I entitled to NAV benefits?
+A: You are generally entitled to benefits if you have a valid residence permit, a Norwegian
+   D-number or national identity number, have been registered as a resident, and meet the
+   income or contribution requirements specific to each benefit.
+
+Q: What is meldekort?
+A: Every two weeks you must submit a meldekort (activity/status report) confirming you are
+   actively seeking work and available for employment. Failure to submit on time can suspend
+   your payments.
+

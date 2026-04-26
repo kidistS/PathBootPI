@@ -1,0 +1,139 @@
+# Norwegian Immigration (UDI) – Domain Grounding Data
+# Source: UDI – Norwegian Directorate of Immigration (www.udi.no) – for educational/demo use only
+
+## OVERVIEW
+UDI (Utlendingsdirektoratet) is the Norwegian Directorate of Immigration. It handles
+applications for visas, residence permits, work permits, citizenship, and asylum.
+
+---
+
+## VISA
+
+### Schengen Visa
+- Citizens of many countries outside the EEA/EU require a Schengen visa for short stays
+  (up to 90 days in 180 days) in Norway.
+- Apply at the Norwegian embassy or consulate in your home country.
+- Processing time: minimum 15 calendar days; often 2–6 weeks.
+- Fees: approximately EUR 80 (adults).
+
+---
+
+## RESIDENCE PERMITS FOR NON-EEA CITIZENS
+
+### Work Permit / Skilled Worker Permit
+- Required before entry if you are a non-EEA/EFTA citizen who wants to work in Norway.
+- You must have a concrete job offer from a Norwegian employer.
+- The job must match the salary and working conditions of Norwegian collective agreements.
+- Apply via Søknadsweb (udi.no/soknad) before arriving in Norway in most cases.
+
+### Self-Employment Permit
+- For non-EEA citizens who want to run their own business in Norway.
+- Must demonstrate viable business plan and sufficient funding.
+
+### Student Permit
+- Must be enrolled in full-time study at an approved Norwegian institution.
+- Applicants must document sufficient funds (approximately NOK 128,887/year, 2024).
+
+### Family Immigration / Reunification
+- Joining a spouse, cohabitant, or parent who is a Norwegian citizen or has a permanent
+  residence permit.
+- The reference person in Norway must meet income requirements
+  (approximately NOK 321,751/year, 2024).
+
+---
+
+## EEA/EFTA CITIZENS
+
+- EU/EEA/EFTA citizens have the right to enter, live, and work in Norway without
+  a visa or residence permit for stays under 3 months.
+- For stays longer than 3 months, they must register at the local police station.
+- EU/EEA/EFTA family members of Norwegian citizens may also use these rights.
+
+---
+
+## PERMANENT RESIDENCE PERMIT
+
+- Non-EEA citizens may apply after 3 years of continuous legal residence with a work
+  or study permit (some permits require 5 years).
+- Must pass a Norwegian language test or demonstrate sufficient Norwegian skills.
+- Must not have been convicted of serious criminal offences.
+- Must be self-sufficient (not dependent on social assistance).
+
+---
+
+## NORWEGIAN CITIZENSHIP
+
+### Requirements
+- Must have lived in Norway for at least 7 of the last 10 years with a residence permit.
+- Must pass a Norwegian language test at level A2 or higher.
+- Must not have serious criminal convictions.
+- Must renounce previous citizenship (with some exceptions).
+- Children under 18 can acquire citizenship together with a parent.
+
+---
+
+## ASYLUM
+
+- Anyone who fears persecution in their home country can apply for asylum at the Norwegian
+  border or at a police station inside Norway.
+- UDI processes the application; the interview (asylintervju) is usually conducted within
+  a few weeks of arrival.
+- If granted protection, refugees receive a residence or settlement permit.
+- Rejected asylum seekers can appeal to UNE (Utlendingsnemnda – Immigration Appeals Board).
+
+---
+
+## D-NUMBER (D-NUMMER)
+
+- A temporary identity number issued to foreign nationals who do not qualify for a
+  Norwegian national identity number (fødselsnummer).
+- Required for banking, tax registration, and many public services.
+- Apply at a tax office (Skatteetaten) or at certain police stations.
+
+---
+
+## INTEGRATION PROGRAM (INTRODUKSJONSPROGRAMMET)
+
+- Mandatory 2-year (extendable to 3 years) integration program for newly arrived refugees
+  and their family members.
+- Includes full-time Norwegian language training and social science courses.
+- Participants receive a weekly training grant (introduksjonsstønad) during the program.
+
+---
+
+## KEY CONTACTS AND WEBSITES
+
+- UDI: www.udi.no
+- UNE (Appeals Board): www.une.no
+- IMDI (Integration): www.imdi.no
+- Police (registration): www.politiet.no
+- Application portal: www.udi.no/soknad
+
+---
+
+## COMMON IMMIGRATION QUESTIONS
+
+Q: I am from outside the EU/EEA. Can I work in Norway?
+A: Yes, but you first need a work permit (tillatelse til å jobbe). You usually apply and
+   receive a decision before you travel to Norway. You need a concrete job offer that
+   meets Norwegian wage and working-condition standards.
+
+Q: How long does it take to process a work permit?
+A: Processing times vary: typically 2–8 weeks for skilled worker permits when applications
+   are complete and submitted online.
+
+Q: I just arrived as a refugee. What are my rights?
+A: You have the right to accommodation in an asylum reception centre (asylmottak) while
+   your case is processed. You may be allowed to work while waiting if processing takes
+   more than 6 months. If granted protection, you enter the integration program.
+
+Q: What documents do I need for a residence permit as a family member?
+A: Passport, proof of relationship (marriage certificate, birth certificate), documentation
+   that the reference person in Norway meets the income requirements, and completed
+   application forms from udi.no.
+
+Q: I have lived in Norway for 3 years on a work permit. Can I apply for permanent residency?
+A: Generally yes, provided you have held a continuous work/residence permit, meet the
+   income requirements, have not broken conditions of your permit, and can demonstrate
+   sufficient Norwegian or Sami language skills.
+

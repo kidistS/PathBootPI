@@ -1,0 +1,106 @@
+# Norwegian Tax (Skatteetaten) – Domain Grounding Data
+# Source: Skatteetaten (www.skatteetaten.no) – for educational/demo use only
+
+## OVERVIEW
+The Norwegian Tax Administration (Skatteetaten) is responsible for collecting taxes
+and for the National Population Register in Norway.
+
+---
+
+## INCOME TAX RATES (2024)
+
+### Personal Tax Rates
+- General income (alminnelig inntekt): 22% flat rate
+- Low-income bracket: 0% (below NOK 70,000 / year)
+- Bracket tax (trinnskatt) is applied progressively on top of general income tax:
+  - Step 1: 1.7%  on income above NOK 208,050
+  - Step 2: 4.0%  on income above NOK 292,850
+  - Step 3: 13.6% on income above NOK 670,000
+  - Step 4: 16.6% on income above NOK 937,900
+  - Step 5: 17.6% on income above NOK 1,350,000
+
+### National Insurance Contributions
+- Employees pay 7.9% of gross income to national insurance (trygdeavgift).
+- Self-employed pay 11.5%.
+
+---
+
+## STANDARD DEDUCTIONS
+
+### Basic Allowance (Minstefradrag)
+- 46% of income, capped at NOK 104,450 (2024)
+- Minimum NOK 31,800
+
+### Personal Allowance (Personfradrag)
+- NOK 88,250 (standard for single taxpayers)
+
+### Interest Deduction
+- Interest paid on loans (mortgage, student loans, etc.) is deductible at 22%.
+
+### Union Fee Deduction
+- Up to NOK 7,700 per year in union membership fees is deductible.
+
+### Home Office Deduction
+- Standard home office deduction: NOK 2,040 per month if you work from home full-time.
+
+---
+
+## HOW TO FILE A TAX RETURN
+
+1. The tax return is pre-filled (forhåndsutfylt skattemelding) every April.
+2. Log in at skatteetaten.no using BankID or MinID.
+3. Review all entries carefully – add any missing income or deductions.
+4. Submit by 30 April (for employees) or 31 May (for self-employed).
+5. Tax settlement (skatteoppgjør) is usually sent between June and October.
+6. If you owe tax, the due date is 20 August / 25 September.
+7. Overpaid tax is refunded directly to your bank account.
+
+---
+
+## TAX CARD (SKATTEKORT)
+
+- A tax card tells your employer how much to withhold from your salary.
+- Retrieve your tax card at skatteetaten.no or via the Skatteetaten app.
+- Main card (Trekkpliktig A-inntekt) – used for primary employment.
+- Secondary card (Biinntektskort) – used for second jobs; flat 50% rate.
+
+---
+
+## WEALTH TAX (FORMUESSKATT)
+
+- Applied nationally (0.3%) and municipally (0.7%) on net wealth above NOK 1,700,000.
+- Primary home valued at 25% of market value; secondary home at 100%.
+
+---
+
+## VALUE ADDED TAX (MVA / MOMS)
+
+- Standard VAT rate: 25%
+- Reduced rate (food and certain goods): 15%
+- Low rate (passenger transport, hotel, cinema): 12%
+- Exempt: health services, financial services, education
+
+---
+
+## COMMON TAX QUESTIONS
+
+Q: What is the deadline for filing my tax return?
+A: 30 April for employees; 31 May for self-employed.
+
+Q: How do I get a tax refund?
+A: If the pre-filled return is correct and you are owed a refund, it is automatically
+   paid after the tax settlement letter (skatteoppgjør) is issued (typically June–October).
+
+Q: What documents do I need for a tax return as an immigrant?
+A: D-number or national ID number (fødselsnummer), documentation of income from all sources
+   (also from home country if applicable), bank interest certificates, and records of
+   expenses you wish to deduct.
+
+Q: Can I get a tax deduction for commuting?
+A: Yes. If the distance between home and primary workplace exceeds 37 km per day,
+   you can claim a commuting deduction of NOK 1.76 per km exceeding the threshold.
+
+Q: As a new arrival, when am I liable for Norwegian tax?
+A: You become a tax resident in Norway after staying 183 days in any 12-month period,
+   or 270 days within a 36-month period.
+

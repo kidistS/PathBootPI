@@ -1,0 +1,229 @@
+# ###############################################################################
+# PathBoot PI – Architecture Diagram
+# Paste at: https://play.d2lang.com
+# ###############################################################################
+
+direction: right
+
+# ###############################################################################
+# EXTERNAL CLIENTS
+# ###############################################################################
+client: Client {
+  shape: person
+  style.fill: "#e8f4fd"
+  style.stroke: "#2980b9"
+}
+
+swagger: Swagger UI {
+  shape: cloud
+  style.fill: "#fff3e0"
+  style.stroke: "#e67e22"
+}
+
+# ###############################################################################
+# SPRING BOOT APPLICATION
+# ###############################################################################
+app: PathBoot PI {
+  style.fill: "#f0f4f8"
+  style.stroke: "#34495e"
+  style.font-size: 16
+
+  # #############################################################################
+  # ENTRY POINT
+  # #############################################################################
+  controller: ChatController\n(REST /api/v1/chat) {
+    shape: rectangle
+    style.fill: "#d5e8d4"
+    style.stroke: "#27ae60"
+  }
+
+  # #############################################################################
+  # FACADE / ORCHESTRATOR
+  # #############################################################################
+  facade: ChatFacadeService\n(Orchestrator) {
+    shape: rectangle
+    style.fill: "#dae8fc"
+    style.stroke: "#2980b9"
+  }
+
+  # #############################################################################
+  # UTILITIES
+  # #############################################################################
+  langDetect: LanguageDetectionUtil\n(EN / NO / AM) {
+    shape: rectangle
+    style.fill: "#ffe6cc"
+    style.stroke: "#d79b00"
+  }
+
+  classifier: DomainClassificationService\n(TAX / NAV / IMMIGRATION / UNKNOWN) {
+    shape: rectangle
+    style.fill: "#ffe6cc"
+    style.stroke: "#d79b00"
+  }
+
+  # #############################################################################
+  # TRANSLATION LAYER
+  # #############################################################################
+  translation: Translation Layer {
+    style.fill: "#fff2cc"
+    style.stroke: "#f1c232"
+
+    orchestrator: TranslationOrchestrationService {
+      shape: rectangle
+      style.fill: "#fff9e6"
+    }
+    nllb: NllbTranslationService\n(Amharic ↔ English) {
+      shape: rectangle
+      style.fill: "#fff9e6"
+    }
+    ollama_t: OllamaTranslationService\n(Norwegian ↔ English) {
+      shape: rectangle
+      style.fill: "#fff9e6"
+    }
+    orchestrator -> nllb: "AM"
+    orchestrator -> ollama_t: "NO"
+  }
+
+  # #############################################################################
+  # AGENT LAYER
+  # #############################################################################
+  agents: Agent Layer {
+    style.fill: "#f3e5f5"
+    style.stroke: "#8e44ad"
+
+    factory: AgentFactory\n(Registry) {
+      shape: rectangle
+      style.fill: "#ead1dc"
+    }
+    tax: TaxAgent {
+      shape: rectangle
+      style.fill: "#e1bee7"
+    }
+    nav: NavAgent {
+      shape: rectangle
+      style.fill: "#e1bee7"
+    }
+    imm: ImmigrationAgent {
+      shape: rectangle
+      style.fill: "#e1bee7"
+    }
+    abstract: AbstractDomainAgent\n(@Cacheable – Caffeine) {
+      shape: rectangle
+      style.fill: "#ce93d8"
+    }
+
+    factory -> tax
+    factory -> nav
+    factory -> imm
+    tax -> abstract: extends
+    nav -> abstract: extends
+    imm -> abstract: extends
+  }
+
+  # #############################################################################
+  # RAG SERVICE
+  # #############################################################################
+  rag: RagGroundingService\n(RAG – SimpleVectorStore) {
+    shape: rectangle
+    style.fill: "#e8f5e9"
+    style.stroke: "#27ae60"
+  }
+
+  # #############################################################################
+  # SESSION MANAGEMENT
+  # #############################################################################
+  session: UserSessionManager\n(2-tier: Memory + SQLite) {
+    shape: rectangle
+    style.fill: "#fce4ec"
+    style.stroke: "#c0392b"
+  }
+
+  # #############################################################################
+  # PERSISTENCE
+  # #############################################################################
+  repo: UserInteractionRepository\n(JPA – async persist) {
+    shape: cylinder
+    style.fill: "#fce4ec"
+    style.stroke: "#c0392b"
+  }
+
+  # #############################################################################
+  # INTERNAL WIRING
+  # #############################################################################
+  controller -> facade: "ChatRequest"
+  facade -> langDetect: "detect language"
+  facade -> translation: "translate ↔ EN"
+  facade -> classifier: "classify domain"
+  facade -> agents: "route to agent"
+  facade -> session: "get/update session"
+  facade -> repo: "@Async persist"
+  agents.abstract -> rag: "findRelevantContext()"
+}
+
+# ###############################################################################
+# EXTERNAL INFRASTRUCTURE
+# ###############################################################################
+ollama: Ollama (localhost:11434) {
+  style.fill: "#ede7f6"
+  style.stroke: "#6c3483"
+
+  mistral: mistral\n(chat model) {
+    shape: rectangle
+    style.fill: "#d7bde2"
+  }
+  nomic: nomic-embed-text\n(embedding model) {
+    shape: rectangle
+    style.fill: "#d7bde2"
+  }
+}
+
+nllb_py: NLLB Python Server\n(localhost:5000) {
+  shape: rectangle
+  style.fill: "#fef9e7"
+  style.stroke: "#b7950b"
+}
+
+sqlite: SQLite DB\n(./data/pathboot-data.db) {
+  shape: cylinder
+  style.fill: "#fdfefe"
+  style.stroke: "#717d7e"
+}
+
+vector_file: Vector Store\n(./data/vector-store.json) {
+  shape: page
+  style.fill: "#eafaf1"
+  style.stroke: "#1e8449"
+}
+
+cache: Caffeine Cache\n(domainAnswers – 60 min / 500 entries) {
+  shape: rectangle
+  style.fill: "#fef5e7"
+  style.stroke: "#ca6f1e"
+}
+
+grounding: Grounding Files\n(classpath: tax / nav / immigration) {
+  shape: page
+  style.fill: "#eaf2ff"
+  style.stroke: "#2471a3"
+}
+
+# ###############################################################################
+# EXTERNAL CONNECTIONS
+# ###############################################################################
+client -> app.controller: "POST /api/v1/chat\n(JSON)"
+swagger -> app.controller: "HTTP"
+
+app.agents.abstract -> ollama.mistral: "chat prompt (LLM call)"
+app.translation.ollama_t -> ollama.mistral: "translate prompt"
+app.translation.nllb -> nllb_py: "POST /translate"
+
+app.rag -> ollama.nomic: "embed chunks\n(first run only)"
+app.rag -> vector_file: "save / load\n(JSON)"
+app.rag -> grounding: "read classpath\n(first run)"
+
+app.repo -> sqlite: "save UserInteraction"
+app.session -> sqlite: "persist / load session"
+
+app.agents.abstract -> cache: "@Cacheable\nlook-up / store"
+
+app.controller -> client: "ChatResponse\n(JSON)"
