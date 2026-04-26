@@ -2897,3 +2897,64 @@ org.springframework.web.servlet.resource.NoResourceFoundException: No static res
 2026-04-26 22:13:16.918 [SpringApplicationShutdownHook] INFO  org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
 2026-04-26 22:13:16.919 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
 2026-04-26 22:13:16.921 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-04-26 22:13:19.604 [main] INFO  com.pathboot.PathBootApplication - === Starting PathBoot PI Multilingual Q&A Application ===
+2026-04-26 22:13:20.077 [main] INFO  com.pathboot.PathBootApplication - Starting PathBootApplication using Java 17.0.13 with PID 7748 (C:\Users\Kidist\IdeaProjects\pathBootPI-1\target\classes started by Kidist in C:\Users\Kidist\IdeaProjects\pathBootPI-1)
+2026-04-26 22:13:20.081 [main] DEBUG com.pathboot.PathBootApplication - Running with Spring Boot v3.4.5, Spring v6.2.6
+2026-04-26 22:13:20.082 [main] INFO  com.pathboot.PathBootApplication - The following 1 profile is active: "local"
+2026-04-26 22:13:21.248 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-26 22:13:21.391 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 134 ms. Found 2 JPA repository interfaces.
+2026-04-26 22:13:22.578 [main] INFO  org.springframework.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-26 22:13:22.601 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-26 22:13:22.603 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-26 22:13:22.603 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.40]
+2026-04-26 22:13:22.687 [main] INFO  org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-26 22:13:22.688 [main] INFO  org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 2567 ms
+2026-04-26 22:13:23.823 [main] INFO  org.springframework.orm.jpa.persistenceunit.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-26 22:13:23.845 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-26 22:13:23.934 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.sqlite.jdbc4.JDBC4Connection@6b3bc1f6
+2026-04-26 22:13:23.935 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-26 22:13:24.635 [main] INFO  org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-26 22:13:25.536 [main] INFO  com.pathboot.config.OllamaConfig - Initialising Ollama ChatClient (Mistral model)
+2026-04-26 22:13:25.572 [main] INFO  com.pathboot.config.RagVectorStoreConfig - Creating SimpleVectorStore backed by Ollama embedding model
+2026-04-26 22:13:25.814 [main] INFO  com.pathboot.agent.factory.AgentFactory - AgentFactory initialised with 3 agents: [NAV, TAX, IMMIGRATION]
+2026-04-26 22:13:25.860 [main] INFO  com.pathboot.config.NllbConfig - NLLB RestTemplate timeouts – connect: 5000ms, read: 120000ms
+2026-04-26 22:13:25.889 [main] INFO  com.pathboot.config.NllbConfig - NLLB translate URL configured as: http://localhost:5000/translate
+2026-04-26 22:13:26.372 [main] INFO  com.pathboot.config.AsyncConfig - Async task executor initialised – core: 2, max: 4, queue: 500
+2026-04-26 22:13:26.380 [main] INFO  com.pathboot.config.CacheConfig - Initialising Caffeine cache 'domainAnswers' (maxSize=500, expireAfter=60m)
+2026-04-26 22:13:26.628 [main] WARN  org.springframework.boot.autoconfigure.orm.jpa.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 22:13:27.475 [main] INFO  org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver - Exposing 2 endpoints beneath base path '/actuator'
+2026-04-26 22:13:27.532 [main] INFO  com.pathboot.service.rag.RagGroundingService - [RAG] Embedding model 'nomic-embed-text' is already available
+2026-04-26 22:13:27.533 [main] INFO  com.pathboot.service.rag.RagGroundingService - [RAG] Loading persisted vector store from: C:\Users\Kidist\IdeaProjects\pathBootPI-1\.\data\vector-store.json
+2026-04-26 22:13:27.623 [main] INFO  com.pathboot.service.rag.RagGroundingService - [RAG] Vector store restored from disk – no re-embedding needed
+2026-04-26 22:13:27.623 [main] INFO  com.pathboot.service.rag.RagGroundingService - [RAG] Vector store ready – port will open now
+2026-04-26 22:13:27.693 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-26 22:13:27.709 [main] INFO  org.springframework.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-26 22:13:27.727 [main] INFO  com.pathboot.PathBootApplication - Started PathBootApplication in 8.055 seconds (process running for 8.779)
+2026-04-26 22:13:27.773 [main] INFO  com.pathboot.service.translation.NllbTranslationService - Sending NLLB warm-up ping to: http://localhost:5000/warmup
+2026-04-26 22:13:28.142 [main] INFO  com.pathboot.service.translation.NllbTranslationService - NLLB warm-up ping successful – model is ready.
+2026-04-26 22:13:28.143 [main] INFO  com.pathboot.PathBootApplication - === PathBoot PI started - Swagger: http://localhost:8080/swagger-ui.html ===
+2026-04-26 22:13:33.011 [http-nio-8080-exec-1] INFO  org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-26 22:13:33.011 [http-nio-8080-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-26 22:13:33.013 [http-nio-8080-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-04-26 22:13:33.718 [http-nio-8080-exec-2] INFO  org.springdoc.api.AbstractOpenApiResource - Init duration for springdoc-openapi is: 418 ms
+2026-04-26 22:14:24.406 [http-nio-8080-exec-6] INFO  com.pathboot.controller.ChatController - POST /api/v1/chat – session: 550e8400-e29b-41d4-a716-446655440000
+2026-04-26 22:14:24.406 [http-nio-8080-exec-6] INFO  com.pathboot.service.ChatFacadeService - Processing chat request - session: 550e8400-e29b-41d4-a716-446655440000
+2026-04-26 22:14:24.586 [http-nio-8080-exec-6] INFO  com.pathboot.session.UserSessionManager - Restored session from DB: 550e8400-e29b-41d4-a716-446655440000
+2026-04-26 22:14:24.587 [http-nio-8080-exec-6] DEBUG com.pathboot.util.LanguageDetectionUtil - Language detected as NORWEGIAN for input snippet: Hvordan man kan søke dagpenger?
+2026-04-26 22:14:24.587 [http-nio-8080-exec-6] INFO  com.pathboot.service.ChatFacadeService - [Session 550e8400-e29b-41d4-a716-446655440000] Detected language: NORWEGIAN
+2026-04-26 22:14:24.588 [http-nio-8080-exec-6] DEBUG com.pathboot.service.classification.DomainClassificationService - Domain scores – TAX: 0, NAV: 1, IMMIGRATION: 0
+2026-04-26 22:14:24.589 [http-nio-8080-exec-6] INFO  com.pathboot.service.classification.DomainClassificationService - Domain classified as: NAV (scores: TAX=0, NAV=1, IMMIGRATION=0)
+2026-04-26 22:14:24.589 [http-nio-8080-exec-6] INFO  com.pathboot.service.ChatFacadeService - [Session 550e8400-e29b-41d4-a716-446655440000] Detected domain: NAV
+2026-04-26 22:14:24.589 [http-nio-8080-exec-6] DEBUG com.pathboot.agent.factory.AgentFactory - Resolved agent NavAgent$$SpringCGLIB$$0 for domain NAV
+2026-04-26 22:14:24.604 [http-nio-8080-exec-6] INFO  com.pathboot.agent.AbstractDomainAgent - [NAV] session=550e8400-e29b-41d4-a716-446655440000 lang=NORWEGIAN: Hvordan man kan søke dagpenger?
+2026-04-26 22:14:33.135 [http-nio-8080-exec-6] DEBUG com.pathboot.service.rag.RagGroundingService - [RAG] 3 chunks retrieved for domain NAV (2325 chars)
+2026-04-26 22:14:48.727 [http-nio-8080-exec-6] INFO  com.pathboot.agent.AbstractDomainAgent - [NAV] Response generated for session 550e8400-e29b-41d4-a716-446655440000
+2026-04-26 22:14:48.728 [http-nio-8080-exec-6] INFO  com.pathboot.service.ChatFacadeService - [Session 550e8400-e29b-41d4-a716-446655440000] Completed in 24322 ms
+2026-04-26 22:14:48.731 [http-nio-8080-exec-6] DEBUG com.pathboot.session.UserSessionManager - Session 550e8400-e29b-41d4-a716-446655440000 updated – total turns: 17
+2026-04-26 22:14:48.811 [pathboot-async-1] DEBUG com.pathboot.service.AsyncPersistenceService - Interaction persisted for session: 550e8400-e29b-41d4-a716-446655440000
+2026-04-26 22:14:48.833 [pathboot-async-2] DEBUG com.pathboot.service.AsyncPersistenceService - Session 550e8400-e29b-41d4-a716-446655440000 persisted to DB (17 turns)
+2026-04-26 22:20:26.959 [SpringApplicationShutdownHook] INFO  org.springframework.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-26 22:20:27.118 [tomcat-shutdown] INFO  org.springframework.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-26 22:20:27.127 [SpringApplicationShutdownHook] INFO  org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-26 22:20:27.129 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-26 22:20:27.146 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
