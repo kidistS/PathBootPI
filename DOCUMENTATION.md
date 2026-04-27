@@ -57,7 +57,7 @@ and `@Async`.
 ### Ollama + Mistral (local LLM)
 Ollama runs LLMs locally with no API key or data leaving the machine. Mistral is chosen
 because it handles both English and Norwegian, fits in 8 GB VRAM, and can be pinned
-permanently in RAM (`keep-alive: "-1m"`) to eliminate cold-start latency.
+permanently in RAM (`keep-alice: "-1m"`) to eliminate cold-start latency.
 
 ### nomic-embed-text + SimpleVectorStore (RAG)
 `nomic-embed-text` (274 MB, via Ollama) embeds grounding file chunks into a
@@ -87,8 +87,6 @@ compared to Logback (Spring's default is explicitly excluded from all starters).
 
 ## 4. Request Processing Pipeline (Step by Step)
 
-**Example input:** "Jak mam złożyć PIT?" → Actually: "How do I pay taxes?" in Norwegian: "Hvordan betaler jeg skatt?"
-
 **Step 1 – Language Detection (`LanguageDetectionUtil`)**
 - Scans Unicode code points.
 - Ethiopic range (U+1200–U+137F) → AMHARIC
@@ -97,7 +95,7 @@ compared to Logback (Spring's default is explicitly excluded from all starters).
 
 **Step 2 – Translate to English (`TranslationOrchestrationService`)**
 - AMHARIC → ENGLISH: HTTP POST to NLLB server (`nllb_server.py`)
-- NORWEGIAN → ENGLISH: Ollama prompt `"Translate the following Norwegian text to English..."`
+- NORWEGIAN → pass-through: agent receives Norwegian text; Mistral is prompted to answer in Norwegian (saves one LLM round-trip)
 - ENGLISH: no-op
 
 **Step 3 – Classify Domain (`DomainClassificationService`)**
@@ -119,7 +117,7 @@ compared to Logback (Spring's default is explicitly excluded from all starters).
 **Step 6 – Translate Answer Back**
 - Same as Step 2 but reversed direction.
 - ENGLISH → AMHARIC: NLLB server
-- ENGLISH → NORWEGIAN: Ollama prompt
+- ENGLISH → NORWEGIAN: already answered in Norwegian (see Step 2)
 
 **Step 7 – Persist (`AsyncPersistenceService`)**
 - Saves `UserInteraction` entity to **SQLite** asynchronously (`@Async`).
@@ -143,8 +141,7 @@ The content is cached forever (Flyweight pattern) so disk I/O is one-time.
 | `grounding/nav/nav-grounding.txt` | Dagpenger, sykepenger, AAP, parental leave, disability benefit |
 | `grounding/immigration/immigration-grounding.txt` | Work permits, residence permits, citizenship, asylum |
 
-To update domain knowledge: edit the relevant `.txt` file and restart the application
-(or clear the `DataGroundingLoader` cache if you add hot-reload support).
+To update domain knowledge: edit the relevant `.txt` file and restart the application.
 
 ---
 
@@ -227,7 +224,7 @@ All configuration lives in `application.yml`. No API keys are required for the d
 If you later integrate a cloud LLM (e.g., OpenAI), add:
 ```yaml
 openai:
-  api-key: ${OPENAI_API_KEY}   # inject via environment variable
+  api-key: ${OPENAI_API_KEY}
 ```
 And set the environment variable:
 ```powershell
@@ -281,4 +278,3 @@ No H2 console is available in production — use the `sqlite3` CLI or DB Browser
 | NLLB slow on CPU | Add GPU support or replace with a faster model |
 | No rate limiting | Add Bucket4j or Spring Cloud Gateway rate limiting |
 | Domain classification is keyword-only | Add an ML classifier (e.g., fine-tuned BERT) for edge cases |
-

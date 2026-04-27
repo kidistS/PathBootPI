@@ -1,6 +1,15 @@
+# Motivation of the project
+> Critical information about Norwegian tax, NAV, and immigration is almost exclusively available in Norwegian or English — leaving newcomers who speak neither
+> language entirely dependent on third-party helpers or paid translators just to understand their own rights and obligations. PathBoot PI was built to break
+> that dependency. By combining local AI models with a RAG pipeline, it delivers accurate, instant answers in English, Norwegian, or Amharic, directly from
+> official grounding sources — entirely offline, with no cloud dependencies or API keys. Newcomers who speak Amharic can now get the information they need
+> in their own language, without waiting for a translator or relying on someone else, making the transition to life in Norway more independent and informed.
+
 # PathBoot PI – Multilingual Domain Q&A Assistant
 
-> A **Spring Boot 3.4** application that answers questions about **Norwegian Tax**, **NAV**, and **Immigration** in **English**, **Amharic**, and **Norwegian** using local AI models (Ollama/Mistral + NLLB-200) and a **Retrieval-Augmented Generation (RAG)** pipeline — no cloud dependency, no API keys required.
+
+> A **Spring Boot 3.4** application that answers questions about **Norwegian Tax**, **NAV**, and **Immigration** in **English**, **Amharic**, and **Norwegian
+> ** using local AI models (Ollama/Mistral + NLLB-200) and a **Retrieval-Augmented Generation (RAG)** pipeline — no cloud dependency, no API keys required.
 
 ---
 

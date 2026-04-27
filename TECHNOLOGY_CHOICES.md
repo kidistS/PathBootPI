@@ -1,7 +1,7 @@
 # PathBoot PI – Technology Choices & Rationale
 
 > **Audience:** developers joining or maintaining the project.  
-> **Last updated:** 2026-04-26
+> **Last updated:** 2026-04-27
 
 This document explains **every technology, library, and framework** used in PathBoot PI,
 and—critically—**why** each was chosen over the alternatives.
@@ -134,7 +134,7 @@ natural choice once the LLM integration decision was made.
 
 **What Spring AI provides:**
 
-- `ChatClient` — a fluent, model-agnostic API:  
+- `ChatClient` — a fluent, model-agnostic API:
   `chatClient.prompt().system(…).user(…).call().content()`
 - `OllamaChatModel` — auto-configured from `application.yml`; no boilerplate.
 - `SimpleVectorStore` — an in-process vector store with similarity search and metadata
@@ -271,7 +271,7 @@ connection-init-sql: "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000; PRAGMA
 | `busy_timeout=30000` | Wait up to 30 s for the write lock instead of failing with `SQLITE_BUSY` |
 | `synchronous=NORMAL` | Good durability / performance balance (not as safe as FULL but far faster) |
 
-**H2 (test scope only):**  
+**H2 (test scope only):**
 H2 is used only in unit/integration tests. It starts in-memory, giving tests a clean slate
 without touching the production SQLite file and without requiring Ollama or the NLLB server.
 
@@ -364,7 +364,7 @@ intercepts the call correctly.
 | Hot | `ConcurrentHashMap<String, UserSessionData>` | O(1) in-process | Fast per-request access |
 | Cold | SQLite via JPA (`UserSessionRepository`) | Disk I/O | Persistence across restarts |
 
-**Lookup order on every request:**  
+**Lookup order on every request:**
 Memory → DB → create new session
 
 **Why not Spring Session (JDBC / Redis)?**
@@ -396,7 +396,7 @@ Keyword matching achieves similar accuracy at **zero latency** and zero token co
 because the domain vocabulary (tax, income, dagpenger, asylum, etc.) is small and
 non-ambiguous in practice.
 
-**Why this matters for performance:**  
+**Why this matters for performance:**
 The optimised pipeline makes exactly **1 LLM call** per request (the domain answer).
 Previously there were 3 calls (classification + optional translation + answer).
 
@@ -483,7 +483,7 @@ deserialization.
 
 | Feature | Log4j2 | Logback |
 |---------|--------|---------|
-| Async appenders | Built-in `AsyncAppender` | Requires extra brige |
+| Async appenders | Built-in `AsyncAppender` | Requires extra bridge |
 | Rolling policy | Powerful size + time | Basic |
 | Performance | Disruptor-based; near-zero GC pressure | Higher allocation rate |
 | Config | XML or YAML | XML only |
@@ -623,4 +623,3 @@ ChatFacadeService  ──(Caffeine cache)──▶ domainAnswers (60 min TTL)
 ---
 
 *End of TECHNOLOGY_CHOICES.md*
-
