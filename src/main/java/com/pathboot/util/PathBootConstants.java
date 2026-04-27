@@ -118,6 +118,10 @@ public final class PathBootConstants {
     public static final String NAV_DOMAIN_DISPLAY_NAME         = "NAV (Norwegian Labour and Welfare Administration)";
     public static final String IMMIGRATION_DOMAIN_DISPLAY_NAME = "Norwegian Immigration (UDI)";
 
+    // ─── Security ────────────────────────────────────────────────────────────
+    /** HTTP request header that must carry a valid API key. */
+    public static final String API_KEY_HEADER = "X-API-Key";
+
     // ─── Session ─────────────────────────────────────────────────────────────
     public static final int MAX_SESSION_HISTORY_SIZE = 20;
 

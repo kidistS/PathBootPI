@@ -61,6 +61,20 @@ rag:
   chunk-min-length: 30             # ignore chunks shorter than this (headers/blanks)
   enabled: true                    # set false to fall back to full grounding file
   store-path: ./data/vector-store.json  # persisted embeddings – loaded on restart, built on first run
+# ─── API Key Security ────────────────────────────────────────────────────────
+api:
+  security:
+    enabled: true
+    # Add or rotate keys by editing this list — no code change required.
+    # In production, inject these via environment variables or a secrets manager.
+    api-keys:
+      - "pathboot-dev-key-2026"
+      - "pathboot-local-key-001"
+    # Login credentials for POST /api/v1/auth/login
+    # Format — username: password  (use env vars in production)
+    users:
+      admin: "pathboot-admin-2026"
+      user: "pathboot-user-2026"
 # ─── Server ─────────────────────────────────────────────────────────────────
 server:
   port: 8080

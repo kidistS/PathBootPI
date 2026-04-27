@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,6 +33,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/chat")
 @Tag(name = "Chat", description = "Multilingual domain Q&A endpoints (Tax, NAV, Immigration)")
+@SecurityRequirement(name = "ApiKeyAuth")
 public class ChatController {
 
     private static final Logger logger = LogManager.getLogger(ChatController.class);
@@ -58,6 +60,7 @@ public class ChatController {
         @ApiResponse(responseCode = "200", description = "Answer generated successfully",
                      content = @Content(schema = @Schema(implementation = ChatResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid request payload"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid X-API-Key header"),
         @ApiResponse(responseCode = "503", description = "AI/translation service unavailable")
     })
     public ResponseEntity<ChatResponse> submitQuestion(@Valid @RequestBody ChatRequest chatRequest) {
