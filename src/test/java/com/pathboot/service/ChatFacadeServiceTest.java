@@ -213,22 +213,60 @@ class ChatFacadeServiceTest {
         assertThat(response.getResponseText()).isEqualTo(agentReply);
     }
 
-    // ── UNKNOWN domain fallback ───────────────────────────────────────────────
+    // ── UNKNOWN domain short-circuit ──────────────────────────────────────────
 
     @Test
-    @DisplayName("UNKNOWN domain – falls back to DEFAULT_FALLBACK_DOMAIN (TAX)")
-    void unknownDomain_shouldFallBackToTaxAgent() {
+    @DisplayName("UNKNOWN domain (English) – returns English clarification, no agent called")
+    void unknownDomain_english_shouldReturnEnglishClarification() {
         when(domainClassificationService.classifyDomain(anyString())).thenReturn(DomainType.UNKNOWN);
-        when(agentFactory.getAgentForDomain(DomainType.TAX)).thenReturn(domainAgent);
-        when(domainAgent.processUserQuestion(anyString(), anyString(), any(Language.class)))
-                .thenReturn(ENGLISH_RESPONSE);
 
-        ChatRequest request = ChatRequest.builder().userInput(USER_INPUT).sessionId(SESSION_ID).build();
+        ChatRequest request = ChatRequest.builder().userInput("Tell me a joke").sessionId(SESSION_ID).build();
         ChatResponse response = chatFacadeService.processUserChatRequest(request);
 
-        // Must fall back to TAX (PathBootConstants.DEFAULT_FALLBACK_DOMAIN)
-        verify(agentFactory, times(1)).getAgentForDomain(DomainType.TAX);
-        assertThat(response.getDetectedDomain()).isEqualTo(DomainType.TAX.name());
+        verify(agentFactory, never()).getAgentForDomain(any());
+        assertThat(response.getDetectedDomain()).isEqualTo(DomainType.UNKNOWN.name());
+        assertThat(response.getResponseText()).containsIgnoringCase("tax");
+        assertThat(response.getResponseText()).containsIgnoringCase("nav");
+        assertThat(response.getResponseText()).containsIgnoringCase("immigration");
+    }
+
+    @Test
+    @DisplayName("UNKNOWN domain (Norwegian) – returns Norwegian clarification, no agent called")
+    void unknownDomain_norwegian_shouldReturnNorwegianClarification() {
+        String norwegianInput = "Hva er meningen med livet?";
+        when(languageDetectionUtil.detectLanguage(norwegianInput)).thenReturn(Language.NORWEGIAN);
+        when(domainClassificationService.classifyDomain(norwegianInput)).thenReturn(DomainType.UNKNOWN);
+
+        ChatRequest request = ChatRequest.builder().userInput(norwegianInput).sessionId(SESSION_ID).build();
+        ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+        verify(agentFactory, never()).getAgentForDomain(any());
+        verify(translationOrchestrationService, never()).translateFromEnglish(anyString(), any());
+        assertThat(response.getDetectedDomain()).isEqualTo(DomainType.UNKNOWN.name());
+        assertThat(response.getDetectedLanguage()).isEqualTo(Language.NORWEGIAN.name());
+        assertThat(response.getResponseText()).contains("NAV");
+        assertThat(response.getResponseText()).contains("skatt");
+    }
+
+    @Test
+    @DisplayName("UNKNOWN domain (Amharic) – returns Amharic clarification, no back-translation needed")
+    void unknownDomain_amharic_shouldReturnAmharicClarification() {
+        String amharicInput = "ሰላም ነው?";
+        String englishInput = "How are you?";
+        when(languageDetectionUtil.detectLanguage(amharicInput)).thenReturn(Language.AMHARIC);
+        when(translationOrchestrationService.translateToEnglish(amharicInput, Language.AMHARIC))
+                .thenReturn(englishInput);
+        when(domainClassificationService.classifyDomain(englishInput)).thenReturn(DomainType.UNKNOWN);
+
+        ChatRequest request = ChatRequest.builder().userInput(amharicInput).sessionId(SESSION_ID).build();
+        ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+        verify(agentFactory, never()).getAgentForDomain(any());
+        verify(translationOrchestrationService, never())
+                .translateFromEnglish(anyString(), any(Language.class));
+        assertThat(response.getDetectedDomain()).isEqualTo(DomainType.UNKNOWN.name());
+        assertThat(response.getDetectedLanguage()).isEqualTo(Language.AMHARIC.name());
+        assertThat(response.getResponseText()).contains("NAV");
     }
 
     // ── Null/blank session handling ───────────────────────────────────────────

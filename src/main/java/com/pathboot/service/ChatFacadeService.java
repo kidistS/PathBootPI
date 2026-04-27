@@ -54,12 +54,12 @@ public class ChatFacadeService {
         logger.info("Processing chat request - session: {}", chatRequest.getSessionId());
 
         UserSessionData session = userSessionManager.getOrCreateSession(chatRequest.getSessionId());
-        String resolvedSessionId = session.getSessionId();
         Language detectedLanguage = languageDetectionUtil.detectLanguage(chatRequest.getUserInput());
+        String resolvedSessionId = session.getSessionId();
         logger.info("[Session {}] Detected language: {}", resolvedSessionId, detectedLanguage);
 
-        final String questionForProcessing;
         final String translatedToEnglish;
+        final String questionForProcessing;
         if (detectedLanguage == Language.AMHARIC) {
             translatedToEnglish   = translationOrchestrationService
                     .translateToEnglish(chatRequest.getUserInput(), detectedLanguage);
@@ -71,8 +71,38 @@ public class ChatFacadeService {
         DomainType detectedDomain = domainClassificationService.classifyDomain(questionForProcessing);
         logger.info("[Session {}] Detected domain: {}", resolvedSessionId, detectedDomain);
 
+        // ── UNKNOWN domain: short-circuit — no LLM call, no agent lookup ──────
         if (detectedDomain == DomainType.UNKNOWN) {
-            detectedDomain = PathBootConstants.DEFAULT_FALLBACK_DOMAIN;
+            logger.warn("[Session {}] Domain could not be determined – returning clarification message",
+                    resolvedSessionId);
+
+            final String clarification;
+            if (detectedLanguage == Language.AMHARIC) {
+                clarification = PathBootConstants.CLARIFICATION_MESSAGE_AMHARIC;
+            } else if (detectedLanguage == Language.NORWEGIAN) {
+                clarification = PathBootConstants.CLARIFICATION_MESSAGE_NORWEGIAN;
+            } else {
+                clarification = PathBootConstants.CLARIFICATION_MESSAGE_ENGLISH;
+            }
+            asyncPersistenceService.persistInteractionAsync(new UserInteractionDto(
+                    resolvedSessionId,
+                    chatRequest.getUserInput(),
+                    detectedLanguage,
+                    translatedToEnglish.equals(chatRequest.getUserInput()) ? null : translatedToEnglish,
+                    DomainType.UNKNOWN,
+                    PathBootConstants.CLARIFICATION_MESSAGE_ENGLISH,
+                    clarification));
+
+            userSessionManager.recordSessionTurn(resolvedSessionId, chatRequest.getUserInput(),
+                    clarification, detectedLanguage, DomainType.UNKNOWN);
+
+            return ChatResponse.builder()
+                    .responseText(clarification)
+                    .detectedLanguage(detectedLanguage.name())
+                    .detectedDomain(DomainType.UNKNOWN.name())
+                    .sessionId(resolvedSessionId)
+                    .timestamp(LocalDateTime.now())
+                    .build();
         }
         DomainAgent domainAgent     = agentFactory.getAgentForDomain(detectedDomain);
         Language agentInputLanguage = (detectedLanguage == Language.AMHARIC)

@@ -43,9 +43,9 @@ public class NllbTranslationService implements TranslationService {
     private static final int MAX_RETRY_ATTEMPTS = 1;
 
     private final RestTemplate nllbRestTemplate;
-    private final String       nllbTranslateUrl;
+    private final String nllbTranslateUrl;
     /** Base URL without the endpoint path – used to build /warmup URL. */
-    private final String       nllbBaseUrl;
+    private final String nllbBaseUrl;
 
     public NllbTranslationService(@Qualifier("nllbRestTemplate") RestTemplate nllbRestTemplate,
                                    @Qualifier("nllbTranslateUrl") String nllbTranslateUrl,

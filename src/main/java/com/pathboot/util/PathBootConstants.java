@@ -1,6 +1,5 @@
 package com.pathboot.util;
 
-import com.pathboot.enums.DomainType;
 
 /**
  * Central repository of all application-wide constant literals.
@@ -79,6 +78,35 @@ public final class PathBootConstants {
         "innvandring", "oppholdstillatelse", "arbeidstillatelse", "asyl", "flyktning",
         "statsborgerskap", "grense", "familiegjenforening", "d-nummer", "utlendingsdirektorat"
     };
+
+    // ─── UNKNOWN domain clarification messages (one per supported language) ──
+    /**
+     * Returned as-is when the domain cannot be determined and the user wrote in English.
+     * No LLM call is made — this is a static string.
+     */
+    public static final String CLARIFICATION_MESSAGE_ENGLISH =
+            "I'm sorry, I couldn't determine which topic your question relates to. "
+            + "I can help with Norwegian Tax (skatt), NAV (welfare and benefits), "
+            + "or Immigration (UDI). "
+            + "Could you rephrase your question and mention the specific topic you need help with?";
+
+    /**
+     * Returned as-is when the domain cannot be determined and the user wrote in Norwegian.
+     */
+    public static final String CLARIFICATION_MESSAGE_NORWEGIAN =
+            "Beklager, jeg kunne ikke avgjøre hvilket tema spørsmålet ditt gjelder. "
+            + "Jeg kan hjelpe med norsk skatt, NAV (velferd og ytelser) eller innvandring (UDI). "
+            + "Kan du omformulere spørsmålet ditt og nevne det spesifikke temaet?";
+
+    /**
+     * Returned as-is when the domain cannot be determined and the user wrote in Amharic.
+     * translateFromEnglish is intentionally NOT called for this path.
+     */
+    public static final String CLARIFICATION_MESSAGE_AMHARIC =
+            "ይቅርታ፣ ጥያቄዎ የሚመለከተውን ርዕሰ ጉዳይ መወሰን አልቻልኩም። "
+            + "ስለ ኖርዌይ ግብር (skatt)፣ NAV (ደህንነትና ጥቅማጥቅሞች) "
+            + "ወይም ስደት (UDI) መርዳት እችላለሁ። "
+            + "ጥያቄዎን እንደገና ቀርጸው ስለሚፈልጉት ርዕሰ ጉዳይ ይጠቅሱ?";
 
     // ─── Grounding file paths (classpath-relative) ───────────────────────────
     public static final String TAX_GROUNDING_FILE         = "grounding/tax/tax-grounding.txt";
