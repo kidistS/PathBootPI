@@ -185,7 +185,7 @@ class UserSessionManagerTest {
             sessionManager.getOrCreateSession(SESSION_ID);
 
             sessionManager.recordSessionTurn(SESSION_ID, "Q1", "A1", Language.ENGLISH, DomainType.TAX);
-            sessionManager.recordSessionTurn(SESSION_ID, "Q2", "A2", Language.NORWEG IAN, DomainType.NAV);
+            sessionManager.recordSessionTurn(SESSION_ID, "Q2", "A2", Language.NORWEGIAN, DomainType.NAV);
             sessionManager.recordSessionTurn(SESSION_ID, "Q3", "A3", Language.AMHARIC, DomainType.IMMIGRATION);
 
             assertThat(sessionManager.getSessionHistory(SESSION_ID)).hasSize(3);

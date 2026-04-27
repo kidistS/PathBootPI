@@ -68,7 +68,7 @@ public final class PathBootConstants {
         "nav", "unemployment", "sick leave", "disability", "benefit", "welfare",
         "allowance", "child benefit", "parental leave", "social security", "work assessment",
         // Norwegian
-        "dagpenger", "sykepenger", "sykmelding", "uføre", "arbeidsavklaringspenger",
+        "dagpenger", "sykepenger", "sykmelding", "sykmeldt", "uføre", "arbeidsavklaringspenger",
         "barnebidrag", "foreldrepenger", "kontantstøtte", "trygd", "sosialhjelp",
         "arbeidsledig", "tilleggsstønad"
     };

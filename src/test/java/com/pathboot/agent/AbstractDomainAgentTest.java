@@ -102,7 +102,7 @@ class AbstractDomainAgentTest {
         void llmResponseWithWhitespace_shouldBeTrimmed() {
             when(ragGroundingService.findRelevantContext(any(), any(), any())).thenReturn(RAG_CONTEXT);
             when(promptBuilder.buildDomainSystemPrompt(any(), any())).thenReturn(SYSTEM_PROMPT);
-            when(chatClient.prompt().system(any()).user(any()).call().content())
+            when(chatClient.prompt().system(anyString()).user(anyString()).call().content())
                     .thenReturn("   " + LLM_RESPONSE + "\n  ");
 
             String result = agent.processUserQuestion(QUESTION, SESSION_ID, Language.ENGLISH);
@@ -122,7 +122,7 @@ class AbstractDomainAgentTest {
         void llmReturnsNull_shouldThrowLlmCommunicationException() {
             when(ragGroundingService.findRelevantContext(any(), any(), any())).thenReturn(RAG_CONTEXT);
             when(promptBuilder.buildDomainSystemPrompt(any(), any())).thenReturn(SYSTEM_PROMPT);
-            when(chatClient.prompt().system(any()).user(any()).call().content()).thenReturn(null);
+            when(chatClient.prompt().system(anyString()).user(anyString()).call().content()).thenReturn(null);
 
             assertThatThrownBy(() -> agent.processUserQuestion(QUESTION, SESSION_ID, Language.ENGLISH))
                     .isInstanceOf(LlmCommunicationException.class)
@@ -134,7 +134,7 @@ class AbstractDomainAgentTest {
         void llmReturnsBlankString_shouldThrowLlmCommunicationException() {
             when(ragGroundingService.findRelevantContext(any(), any(), any())).thenReturn(RAG_CONTEXT);
             when(promptBuilder.buildDomainSystemPrompt(any(), any())).thenReturn(SYSTEM_PROMPT);
-            when(chatClient.prompt().system(any()).user(any()).call().content()).thenReturn("   ");
+            when(chatClient.prompt().system(anyString()).user(anyString()).call().content()).thenReturn("   ");
 
             assertThatThrownBy(() -> agent.processUserQuestion(QUESTION, SESSION_ID, Language.ENGLISH))
                     .isInstanceOf(LlmCommunicationException.class)
@@ -146,7 +146,7 @@ class AbstractDomainAgentTest {
         void llmThrowsRuntimeException_shouldWrapInLlmCommunicationException() {
             when(ragGroundingService.findRelevantContext(any(), any(), any())).thenReturn(RAG_CONTEXT);
             when(promptBuilder.buildDomainSystemPrompt(any(), any())).thenReturn(SYSTEM_PROMPT);
-            when(chatClient.prompt().system(any()).user(any()).call().content())
+            when(chatClient.prompt().system(anyString()).user(anyString()).call().content())
                     .thenThrow(new RuntimeException("Ollama connection refused"));
 
             assertThatThrownBy(() -> agent.processUserQuestion(QUESTION, SESSION_ID, Language.ENGLISH))
@@ -160,10 +160,46 @@ class AbstractDomainAgentTest {
             when(ragGroundingService.findRelevantContext(any(), any(), any())).thenReturn(RAG_CONTEXT);
             when(promptBuilder.buildDomainSystemPrompt(any(), any())).thenReturn(SYSTEM_PROMPT);
             LlmCommunicationException original = new LlmCommunicationException("original error");
-            when(chatClient.prompt().system(any()).user(any()).call().content()).thenThrow(original);
+            when(chatClient.prompt().system(anyString()).user(anyString()).call().content()).thenThrow(original);
 
             assertThatThrownBy(() -> agent.processUserQuestion(QUESTION, SESSION_ID, Language.ENGLISH))
                     .isSameAs(original);
+        }
+
+        @Test
+        @DisplayName("Empty RAG context – prompt is still built and LLM is called")
+        void emptyRagContext_shouldStillCallLlm() {
+            when(ragGroundingService.findRelevantContext(any(), any(), any())).thenReturn("");
+            when(promptBuilder.buildDomainSystemPrompt(any(), eq(""))).thenReturn(SYSTEM_PROMPT);
+            when(chatClient.prompt().system(anyString()).user(anyString()).call().content()).thenReturn(LLM_RESPONSE);
+
+            String result = agent.processUserQuestion(QUESTION, SESSION_ID, Language.ENGLISH);
+
+            assertThat(result).isEqualTo(LLM_RESPONSE);
+            verify(promptBuilder, times(1)).buildDomainSystemPrompt(any(), eq(""));
+        }
+    }
+
+    // ── AMHARIC language (already translated to English before reaching agent) ──
+
+    @Nested
+    @DisplayName("processUserQuestion – AMHARIC (pre-translated to English)")
+    class AmharicPreTranslated {
+
+        @Test
+        @DisplayName("AMHARIC language uses standard (non-language-aware) prompt builder")
+        void amharicLanguage_shouldUseStandardPromptBuilder() {
+            // After Amharic→English translation, ChatFacadeService passes Language.ENGLISH to agent.
+            // If agent were called directly with AMHARIC, it should still use standard prompt.
+            when(ragGroundingService.findRelevantContext(any(), any(), any())).thenReturn(RAG_CONTEXT);
+            when(promptBuilder.buildDomainSystemPrompt(any(), any())).thenReturn(SYSTEM_PROMPT);
+            when(chatClient.prompt().system(anyString()).user(anyString()).call().content()).thenReturn(LLM_RESPONSE);
+
+            String result = agent.processUserQuestion(QUESTION, SESSION_ID, Language.AMHARIC);
+
+            assertThat(result).isEqualTo(LLM_RESPONSE);
+            verify(promptBuilder, times(1)).buildDomainSystemPrompt(anyString(), anyString());
+            verify(promptBuilder, never()).buildLanguageAwareDomainSystemPrompt(any(), any(), any());
         }
     }
 }

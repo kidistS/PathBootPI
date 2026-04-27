@@ -196,14 +196,22 @@ To scale horizontally, replace the hot tier with Spring Session backed by Redis:
 
 ## 8. Adding a New Domain
 
-1. Create `grounding/<newdomain>/<newdomain>-grounding.txt` with relevant content.
-2. Add `NEW_DOMAIN` to the `DomainType` enum.
-3. Add `NEW_DOMAIN_GROUNDING_FILE` and `NEW_DOMAIN_DISPLAY_NAME` constants in `PathBootConstants`.
-4. Create `agent/<newdomain>/NewDomainAgent.java` extending `AbstractDomainAgent`.
-5. Create `service/domain/NewDomainService.java` implementing `DomainProcessingService`.
-6. `AgentFactory.registerAgents()` will automatically pick up the new `@Component` agent if you
-   add it to the constructor and `@PostConstruct` method.
-7. Write unit tests for the new service.
+> 📄 Full step-by-step guide with exact code for all 7 files:
+> **[ADDING_NEW_DOMAIN.md](./ADDING_NEW_DOMAIN.md)**
+
+**Summary — 7 files to change, nothing else:**
+
+| Step | File |
+|------|------|
+| 1 | `enums/DomainType.java` — add enum constant |
+| 2 | `util/PathBootConstants.java` — add keywords array + 2 constants |
+| 3 | `grounding/<domain>/<domain>-grounding.txt` — new knowledge file |
+| 4 | `agent/<domain>/<Domain>Agent.java` — new `@Component`, 3 method overrides |
+| 5 | `agent/factory/AgentFactory.java` — wire new agent into registry |
+| 6 | `service/classification/DomainClassificationService.java` — add score to classifier |
+| 7 | Tests — `AgentFactoryTest` + `DomainClassificationServiceTest` |
+
+> ⚠️ Delete `data/vector-store.json` before the first restart so RAG re-embeds all domains.
 
 ---
 

@@ -5,4 +5,5 @@ data/*.db-wal
 *.class
 .idea/
 *.iml
+logs/
 

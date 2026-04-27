@@ -18,10 +18,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("ChatFacadeService - Unit Tests")
 class ChatFacadeServiceTest {
     @Mock private LanguageDetectionUtil languageDetectionUtil;
@@ -42,7 +45,7 @@ class ChatFacadeServiceTest {
     void setUpMocks() {
         UserSessionData sessionData = mock(UserSessionData.class);
         when(sessionData.getSessionId()).thenReturn(SESSION_ID);
-        when(userSessionManager.getOrCreateSession(anyString())).thenReturn(sessionData);
+        when(userSessionManager.getOrCreateSession(any())).thenReturn(sessionData);
         when(languageDetectionUtil.detectLanguage(anyString())).thenReturn(Language.ENGLISH);
         when(domainClassificationService.classifyDomain(anyString())).thenReturn(DomainType.TAX);
         when(agentFactory.getAgentForDomain(DomainType.TAX)).thenReturn(domainAgent);
@@ -111,5 +114,142 @@ class ChatFacadeServiceTest {
         chatFacadeService.processUserChatRequest(request);
         verify(userSessionManager, times(1)).recordSessionTurn(
                 anyString(), anyString(), anyString(), any(Language.class), any(DomainType.class));
+    }
+
+    // ── Amharic pipeline ──────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Amharic input – translateToEnglish is called before agent")
+    void amharicInput_shouldCallTranslateToEnglishBeforeAgent() {
+        String amharicInput  = "ወደ ኖርዌይ ለመሄድ ቪዛ ያስፈልጋል?";
+        String englishInput  = "Do I need a visa to go to Norway?";
+        String agentReply    = "You need a work permit.";
+        String amharicReply  = "የሥራ ፈቃድ ያስፈልግዎታል።";
+
+        when(languageDetectionUtil.detectLanguage(amharicInput)).thenReturn(Language.AMHARIC);
+        when(translationOrchestrationService.translateToEnglish(amharicInput, Language.AMHARIC))
+                .thenReturn(englishInput);
+        when(domainClassificationService.classifyDomain(englishInput)).thenReturn(DomainType.IMMIGRATION);
+        when(agentFactory.getAgentForDomain(DomainType.IMMIGRATION)).thenReturn(domainAgent);
+        when(domainAgent.processUserQuestion(englishInput, SESSION_ID, Language.ENGLISH))
+                .thenReturn(agentReply);
+        when(translationOrchestrationService.translateFromEnglish(agentReply, Language.AMHARIC))
+                .thenReturn(amharicReply);
+
+        ChatRequest request = ChatRequest.builder().userInput(amharicInput).sessionId(SESSION_ID).build();
+        ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+        verify(translationOrchestrationService, times(1))
+                .translateToEnglish(amharicInput, Language.AMHARIC);
+        verify(translationOrchestrationService, times(1))
+                .translateFromEnglish(agentReply, Language.AMHARIC);
+        assertThat(response.getResponseText()).isEqualTo(amharicReply);
+        assertThat(response.getDetectedLanguage()).isEqualTo(Language.AMHARIC.name());
+    }
+
+    @Test
+    @DisplayName("Amharic input – agent is called with ENGLISH language (not AMHARIC)")
+    void amharicInput_agentShouldReceiveEnglishLanguage() {
+        String amharicInput = "ቀረጥ ምን ያህል ነው?";
+        String englishInput = "What is the tax rate?";
+
+        when(languageDetectionUtil.detectLanguage(amharicInput)).thenReturn(Language.AMHARIC);
+        when(translationOrchestrationService.translateToEnglish(amharicInput, Language.AMHARIC))
+                .thenReturn(englishInput);
+        when(domainClassificationService.classifyDomain(englishInput)).thenReturn(DomainType.TAX);
+        when(agentFactory.getAgentForDomain(DomainType.TAX)).thenReturn(domainAgent);
+        when(domainAgent.processUserQuestion(englishInput, SESSION_ID, Language.ENGLISH))
+                .thenReturn(ENGLISH_RESPONSE);
+        when(translationOrchestrationService.translateFromEnglish(ENGLISH_RESPONSE, Language.AMHARIC))
+                .thenReturn("የቀረጥ መጠን 22% ነው።");
+
+        ChatRequest request = ChatRequest.builder().userInput(amharicInput).sessionId(SESSION_ID).build();
+        chatFacadeService.processUserChatRequest(request);
+
+        // Agent must receive ENGLISH, not AMHARIC
+        verify(domainAgent, times(1))
+                .processUserQuestion(englishInput, SESSION_ID, Language.ENGLISH);
+    }
+
+    // ── Norwegian pipeline ────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Norwegian input – translateToEnglish is NOT called (pass-through)")
+    void norwegianInput_shouldNotCallTranslateToEnglish() {
+        String norwegianInput = "Hvordan søker jeg om dagpenger?";
+
+        when(languageDetectionUtil.detectLanguage(norwegianInput)).thenReturn(Language.NORWEGIAN);
+        when(domainClassificationService.classifyDomain(norwegianInput)).thenReturn(DomainType.NAV);
+        when(agentFactory.getAgentForDomain(DomainType.NAV)).thenReturn(domainAgent);
+        when(domainAgent.processUserQuestion(norwegianInput, SESSION_ID, Language.NORWEGIAN))
+                .thenReturn("Dagpenger søkes via NAV sin nettside.");
+
+        ChatRequest request = ChatRequest.builder().userInput(norwegianInput).sessionId(SESSION_ID).build();
+        chatFacadeService.processUserChatRequest(request);
+
+        verify(translationOrchestrationService, never())
+                .translateToEnglish(anyString(), any(Language.class));
+        verify(translationOrchestrationService, never())
+                .translateFromEnglish(anyString(), any(Language.class));
+    }
+
+    @Test
+    @DisplayName("Norwegian input – agent receives NORWEGIAN language")
+    void norwegianInput_agentShouldReceiveNorwegianLanguage() {
+        String norwegianInput = "Hva er trinnskatt?";
+        String agentReply     = "Trinnskatt er en progressiv skatt.";
+
+        when(languageDetectionUtil.detectLanguage(norwegianInput)).thenReturn(Language.NORWEGIAN);
+        when(domainClassificationService.classifyDomain(norwegianInput)).thenReturn(DomainType.TAX);
+        when(agentFactory.getAgentForDomain(DomainType.TAX)).thenReturn(domainAgent);
+        when(domainAgent.processUserQuestion(norwegianInput, SESSION_ID, Language.NORWEGIAN))
+                .thenReturn(agentReply);
+
+        ChatRequest request = ChatRequest.builder().userInput(norwegianInput).sessionId(SESSION_ID).build();
+        ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+        verify(domainAgent, times(1))
+                .processUserQuestion(norwegianInput, SESSION_ID, Language.NORWEGIAN);
+        assertThat(response.getResponseText()).isEqualTo(agentReply);
+    }
+
+    // ── UNKNOWN domain fallback ───────────────────────────────────────────────
+
+    @Test
+    @DisplayName("UNKNOWN domain – falls back to DEFAULT_FALLBACK_DOMAIN (TAX)")
+    void unknownDomain_shouldFallBackToTaxAgent() {
+        when(domainClassificationService.classifyDomain(anyString())).thenReturn(DomainType.UNKNOWN);
+        when(agentFactory.getAgentForDomain(DomainType.TAX)).thenReturn(domainAgent);
+        when(domainAgent.processUserQuestion(anyString(), anyString(), any(Language.class)))
+                .thenReturn(ENGLISH_RESPONSE);
+
+        ChatRequest request = ChatRequest.builder().userInput(USER_INPUT).sessionId(SESSION_ID).build();
+        ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+        // Must fall back to TAX (PathBootConstants.DEFAULT_FALLBACK_DOMAIN)
+        verify(agentFactory, times(1)).getAgentForDomain(DomainType.TAX);
+        assertThat(response.getDetectedDomain()).isEqualTo(DomainType.TAX.name());
+    }
+
+    // ── Null/blank session handling ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("null sessionId – new session UUID is created and returned")
+    void nullSessionId_shouldGenerateNewSessionId() {
+        ChatRequest request = ChatRequest.builder().userInput(USER_INPUT).sessionId(null).build();
+        ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+        assertThat(response.getSessionId()).isNotBlank();
+    }
+
+    // ── Response timestamp ────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("response always has a non-null timestamp")
+    void response_shouldAlwaysHaveTimestamp() {
+        ChatRequest request = ChatRequest.builder().userInput(USER_INPUT).sessionId(SESSION_ID).build();
+        ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+        assertThat(response.getTimestamp()).isNotNull();
     }
 }

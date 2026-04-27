@@ -47,7 +47,22 @@ Explains every library, framework, and tool used — and **why** each was chosen
 
 ---
 
-### 3. [`diagrams/pathboot-architecture.d2`](./diagrams/pathboot-architecture.d2) — Architecture Diagram (D2)
+### 3. [`ADDING_NEW_DOMAIN.md`](./ADDING_NEW_DOMAIN.md) — How to Add a New Domain
+Complete step-by-step guide for extending PathBoot PI with a new domain (e.g., Education, Housing).
+
+| Section | What it covers |
+|---------|---------------|
+| Step 1–2 | `DomainType` enum + `PathBootConstants` keywords and constants |
+| Step 3 | Knowledge grounding file format and RAG re-embed instruction |
+| Step 4 | New agent class — only 3 method overrides needed |
+| Step 5 | Wiring the agent into `AgentFactory` |
+| Step 6 | Extending `DomainClassificationService` keyword scorer |
+| Step 7 | Unit tests for `AgentFactoryTest` and `DomainClassificationServiceTest` |
+| Checklist | 8-item completion checklist |
+
+---
+
+### 4. [`diagrams/pathboot-architecture.d2`](./diagrams/pathboot-architecture.d2) — Architecture Diagram (D2)
 Visual architecture diagram showing all components and their connections.
 
 - **Render online:** paste the file content at https://play.d2lang.com
@@ -64,7 +79,7 @@ Visual architecture diagram showing all components and their connections.
 | Understand the request flow end-to-end | `DOCUMENTATION.md` §4 |
 | Understand why a technology was chosen | `TECHNOLOGY_CHOICES.md` |
 | See the architecture visually | `diagrams/pathboot-architecture.d2` |
-| Add a new domain (e.g., Housing) | `DOCUMENTATION.md` §8 |
+| Add a new domain (e.g., Education, Housing) | `ADDING_NEW_DOMAIN.md` |
 | Add a new language | `DOCUMENTATION.md` §9 |
 | Check the database schema | `DOCUMENTATION.md` §11 |
 | Read the API reference | `README.md` – API Usage section |
