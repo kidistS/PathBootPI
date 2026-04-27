@@ -100,6 +100,20 @@ unemployment benefits, parental leave, sick pay, disability benefit, and pension
 
 ---
 
+## Useful NAV Links:
+
+- Unemployment Benefits: https://www.nav.no/dagpenger/en
+- Sick Pay: https://www.nav.no/sykepenger/en
+- Parental Leave: https://www.nav.no/foreldrepenger
+- Disability Benefit: https://www.nav.no/uforetrygd/en
+- Work Assessment Allowance: https://www.nav.no/aap/en
+- Old-Age Pension: https://www.nav.no/alderspensjon/en
+- Job-Seeker Registration: https://www.nav.no/registrer-arbeidssoker/en
+- Financial support and services: https://www.nav.no/tjenester/en
+- Contact NAV: https://www.nav.no/kontaktoss/en
+
+---
+
 ## COMMON NAV QUESTIONS
 
 Q: How do I register as a job-seeker?
@@ -119,4 +133,3 @@ Q: What is meldekort?
 A: Every two weeks you must submit a meldekort (activity/status report) confirming you are
    actively seeking work and available for employment. Failure to submit on time can suspend
    your payments.
-

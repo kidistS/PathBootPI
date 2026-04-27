@@ -24,33 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Retrieval-Augmented Generation (RAG) service.
- *
- * <h3>Startup – guaranteed-before-first-request initialisation</h3>
- * Implements {@link SmartInitializingSingleton}: Spring calls
- * {@link #afterSingletonsInstantiated()} during context refresh, <em>before</em>
- * the embedded Tomcat port opens.  No request can arrive before the vector store
- * is ready, eliminating the race condition that previously caused the full
- * grounding file to be used as a fallback.
- *
- * <h3>Two-path initialisation</h3>
- * <ol>
- *   <li><b>Fast path (every restart after the first):</b> pre-computed embeddings are
- *       loaded from {@code rag.store-path} in milliseconds – no Ollama call needed.</li>
- *   <li><b>Slow path (first run only):</b> grounding files are chunked, embedded via
- *       {@code nomic-embed-text}, stored in memory, then serialised to disk.</li>
- * </ol>
- *
- * <h3>Query time</h3>
- * A metadata filter expression on {@link SearchRequest} restricts the search to the
- * requested domain at vector-store level – exactly {@code top-k} chunks are returned
- * with no over-fetch and no Java-side filtering.
- *
- * <h3>Fallback</h3>
- * Any failure (missing Ollama, corrupt store file, …) falls back to the full grounding
- * file so the system always answers, at the cost of higher LLM latency.
- */
 @Service
 public class RagGroundingService implements SmartInitializingSingleton {
 
@@ -90,14 +63,11 @@ public class RagGroundingService implements SmartInitializingSingleton {
     }
 
     // ─── Startup document loading ─────────────────────────────────────────────
-
     /**
-     * Called by Spring during context refresh, <b>before</b> the embedded web server
-     * opens its port.  Guarantees the vector store is populated before any HTTP request
-     * can arrive.
+     * Called by Spring during context refresh, <b>before</b> the embedded web server opens its port.  Guarantees the vector
+     * store is populated before any HTTP request can arrive.
      *
-     * <p>On subsequent restarts the fast path (load from disk) completes in under a
-     * second, so startup latency is negligible.</p>
+     * <p>On subsequent restarts the fast path (load from disk) completes in under a second, so startup latency is negligible.</p>
      */
     @Override
     public void afterSingletonsInstantiated() {
@@ -134,7 +104,6 @@ public class RagGroundingService implements SmartInitializingSingleton {
     }
 
     // ─── Query-time retrieval ──────────────────────────────────────────────────
-
     /**
      * Returns the most relevant grounding context for the given question and domain.
      * Falls back to the full grounding file if RAG is disabled or unavailable.
@@ -161,12 +130,9 @@ public class RagGroundingService implements SmartInitializingSingleton {
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────
-
     /**
-     * Checks whether the configured embedding model is present in Ollama.
-     * If it is missing, issues a {@code POST /api/pull} request and waits for the
-     * download to complete (up to 15 minutes).  Any failure is logged but does not
-     * abort startup – the embedding call will surface the real error naturally.
+     * Checks whether the configured embedding model is present in Ollama. If it is missing, issues a {@code POST /api/pull}
+     * request to pull it automatically. This ensures the embedding model is available without requiring manual setup steps.
      */
     private void ensureEmbeddingModelAvailable() {
         try {
@@ -200,8 +166,8 @@ public class RagGroundingService implements SmartInitializingSingleton {
     }
 
     /**
-     * Retrieves exactly {@code top-k} chunks for the given domain using a metadata
-     * filter expression evaluated inside the vector store – no over-fetch, no Java-side filtering.
+     * Retrieves exactly {@code top-k} chunks for the given domain using a metadata filter expression evaluated inside the
+     * vector store – no over-fetch, no Java-side filtering.
      */
     private String retrieveTopKChunks(String question,
                                        DomainType domain,
@@ -239,8 +205,8 @@ public class RagGroundingService implements SmartInitializingSingleton {
     }
 
     /**
-     * Splits raw grounding text into paragraph-level {@link Document} chunks
-     * with domain and source metadata for downstream filtering.
+     * Splits raw grounding text into paragraph-level {@link Document} chunks with domain and source metadata
+     * for downstream filtering.
      */
     private List<Document> chunkIntoDocuments(String rawContent,
                                                String domainName,
@@ -258,4 +224,3 @@ public class RagGroundingService implements SmartInitializingSingleton {
         return documents;
     }
 }
-

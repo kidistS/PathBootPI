@@ -4,9 +4,6 @@ import com.pathboot.enums.DomainType;
 
 /**
  * Central repository of all application-wide constant literals.
- *
- * <p>All magic strings and numbers are declared here as {@code public static final}
- * fields so they can be referenced by name throughout the codebase.</p>
  */
 public final class PathBootConstants {
 
@@ -96,15 +93,9 @@ public final class PathBootConstants {
     // ─── Session ─────────────────────────────────────────────────────────────
     public static final int MAX_SESSION_HISTORY_SIZE = 20;
 
-    /**
-     * Domain used as a fallback when the classifier cannot determine the topic.
-     * Tax is the most commonly queried domain, so it is the safest default.
-     */
-    public static final DomainType DEFAULT_FALLBACK_DOMAIN = DomainType.TAX;
-
     // ─── Swagger ─────────────────────────────────────────────────────────────
     public static final String SWAGGER_API_TITLE       = "PathBoot PI – Multilingual Domain Q&A API";
     public static final String SWAGGER_API_DESCRIPTION =
-            "REST API for asking Tax, NAV, and Immigration questions in English, Amharic, or Norwegian.";
+            "REST API for asking Tax, NAV, and Immigration questions in Amharic, English, or Norwegian.";
     public static final String SWAGGER_API_VERSION = "1.0.0";
 }

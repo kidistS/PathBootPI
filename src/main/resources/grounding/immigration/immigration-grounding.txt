@@ -107,8 +107,18 @@ applications for visas, residence permits, work permits, citizenship, and asylum
 - UNE (Appeals Board): www.une.no
 - IMDI (Integration): www.imdi.no
 - Police (registration): www.politiet.no
-- Application portal: www.udi.no/soknad
+- Application portal: https://www.udi.no/en/word-definitions/forms/
 
+---
+## Useful UDI Links:
+- Visa information: https://www.udi.no/en/word-definitions/visa-information-system-vis/
+- Work immigration: https://www.udi.no/en/want-to-apply/work-immigration/
+- Student permits: https://www.udi.no/en/word-definitions/guide-to-case-processing-times-for-study-permits/
+- Family immigration: https://www.udi.no/en/want-to-apply/family-immigration/
+- Permanent residence: https://www.udi.no/en/word-definitions/permanent-residence-permit/
+- Citizenship: https://www.udi.no/en/want-to-apply/citizenship/
+- Asylum seeker information: https://www.udi.no/en/word-definitions/asylum-seeker/
+- D-number: https://www.udi.no/en/word-definitions/d-number/
 ---
 
 ## COMMON IMMIGRATION QUESTIONS

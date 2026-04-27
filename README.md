@@ -1,15 +1,31 @@
 # Motivation of the project
-> Critical information about Norwegian tax, NAV, and immigration is almost exclusively available in Norwegian or English — leaving newcomers who speak neither
-> language entirely dependent on third-party helpers or paid translators just to understand their own rights and obligations. PathBoot PI was built to break
-> that dependency. By combining local AI models with a RAG pipeline, it delivers accurate, instant answers in English, Norwegian, or Amharic, directly from
-> official grounding sources — entirely offline, with no cloud dependencies or API keys. Newcomers who speak Amharic can now get the information they need
-> in their own language, without waiting for a translator or relying on someone else, making the transition to life in Norway more independent and informed.
+> Critical information about Norwegian tax, NAV, and immigration is almost exclusively available in Norwegian or English,
+> leaving newcomers who speak neither language entirely dependent on third-party helpers just to understand their own 
+> rights and obligations. 
+
+> As an immigrant myself, I know how overwhelming it can be to navigate a new country's bureaucracy without clear information
+> about where to find answers in your native language. Many newcomers end up relying on friends, family, or paid services just
+> to understand basic information about taxes, social benefits, or visa requirements, etc.
+
+> No waiting for a translator or relying on someone else, making the transition to life in Norway more independent and empowering
+> for everyone.
+
+> This project is a labor of love to empower newcomers with the knowledge they need to thrive in Norway, regardless of their 
+> language background. Newcomers (Ethiopian) who speak Amharic can now get the information they need in their own language.
+
+> PathBoot PI was built to break that dependency. By combining local AI models with a RAG pipeline, it delivers accurate, 
+> instant answers in Amharic, English or Norwegian, directly from official grounding documents.
+
+> No cloud, no API keys, no waiting for a translator or relying on someone else, making the transition to life 
+> in Norway more independent and empowering for everyone.
+ 
+
 
 # PathBoot PI – Multilingual Domain Q&A Assistant
 
-
-> A **Spring Boot 3.4** application that answers questions about **Norwegian Tax**, **NAV**, and **Immigration** in **English**, **Amharic**, and **Norwegian
-> ** using local AI models (Ollama/Mistral + NLLB-200) and a **Retrieval-Augmented Generation (RAG)** pipeline — no cloud dependency, no API keys required.
+> A **Spring Boot 3.4** application that answers questions about **Norwegian Tax**, **NAV**, and **Immigration** in **English**,
+> **Amharic**, and **Norwegian ** using local AI models (Ollama/Mistral + NLLB-200) and a **Retrieval-Augmented Generation (RAG)** 
+> pipeline — no cloud dependency, no API keys required.
 
 ---
 
@@ -38,7 +54,9 @@ PathBoot PI accepts a user question in **any of three languages** and returns an
 | Norwegian      | Ollama / Mistral       | Ollama / Mistral   |
 | Amharic        | NLLB-200-Distilled-600M (local Python server) | Ollama / Mistral |
 
-The system automatically **detects the language**, **classifies the domain** (Tax / NAV / Immigration), routes to the matching **domain agent**, enriches the prompt with **RAG context** from a local vector store, and translates the response back if needed. Session history is persisted to **SQLite** and survives restarts.
+The system automatically **detects the language**, **classifies the domain** (Tax / NAV / Immigration), routes to the matching **domain agent**,
+enriches the prompt with **RAG context** from a local vector store, and translates the response back if needed. Session history is persisted to 
+**SQLite** and survives restarts.
 
 ---
 
@@ -172,7 +190,8 @@ mvn clean install -DskipTests
 mvn spring-boot:run
 ```
 
-> **First run:** The RAG vector store is built by chunking the grounding files and calling `nomic-embed-text` for each chunk. Embeddings are saved to `data/vector-store.json`. Subsequent restarts load from disk — no re-embedding needed.
+> **First run:** The RAG vector store is built by chunking the grounding files and calling `nomic-embed-text` for each chunk. Embeddings are saved to 
+> `data/vector-store.json`. Subsequent restarts load from disk — no re-embedding needed.
 
 ### Step 4 – Open Swagger UI
 Navigate to: http://localhost:8080/swagger-ui.html

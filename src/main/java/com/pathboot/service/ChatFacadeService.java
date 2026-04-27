@@ -52,10 +52,12 @@ public class ChatFacadeService {
     public ChatResponse processUserChatRequest(ChatRequest chatRequest) {
         long startTime = System.currentTimeMillis();
         logger.info("Processing chat request - session: {}", chatRequest.getSessionId());
+
         UserSessionData session = userSessionManager.getOrCreateSession(chatRequest.getSessionId());
         String resolvedSessionId = session.getSessionId();
         Language detectedLanguage = languageDetectionUtil.detectLanguage(chatRequest.getUserInput());
         logger.info("[Session {}] Detected language: {}", resolvedSessionId, detectedLanguage);
+
         final String questionForProcessing;
         final String translatedToEnglish;
         if (detectedLanguage == Language.AMHARIC) {
@@ -68,6 +70,7 @@ public class ChatFacadeService {
         }
         DomainType detectedDomain = domainClassificationService.classifyDomain(questionForProcessing);
         logger.info("[Session {}] Detected domain: {}", resolvedSessionId, detectedDomain);
+
         if (detectedDomain == DomainType.UNKNOWN) {
             detectedDomain = PathBootConstants.DEFAULT_FALLBACK_DOMAIN;
         }

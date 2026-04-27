@@ -34,6 +34,7 @@ public abstract class AbstractDomainAgent implements DomainAgent {
     )
     public String processUserQuestion(String userQuestion, String sessionId, Language userLanguage) {
         logger.info("[{}] session={} lang={}: {}", getDomainType(), sessionId, userLanguage, abbreviate(userQuestion));
+
         String groundingContext = ragGroundingService.findRelevantContext(
                 userQuestion, getDomainType(), getGroundingFilePath());
         String systemPrompt = (userLanguage == Language.NORWEGIAN)
@@ -41,6 +42,7 @@ public abstract class AbstractDomainAgent implements DomainAgent {
                 : promptBuilder.buildDomainSystemPrompt(getDomainDisplayName(), groundingContext);
         String response = callLlm(systemPrompt, userQuestion);
         logger.info("[{}] Response generated for session {}", getDomainType(), sessionId);
+
         return response;
     }
 

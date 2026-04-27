@@ -27,17 +27,6 @@ public interface DomainAgent {
     String processUserQuestion(String userQuestion, String sessionId, Language userLanguage);
 
     /**
-     * Convenience overload that assumes the question is in English.
-     *
-     * @param englishQuestion the user's question already in English
-     * @param sessionId       the current session identifier
-     * @return English-language response
-     */
-    default String processUserQuestion(String englishQuestion, String sessionId) {
-        return processUserQuestion(englishQuestion, sessionId, Language.ENGLISH);
-    }
-
-    /**
      * Returns the domain type this agent handles.
      *
      * @return the {@link DomainType} identifier

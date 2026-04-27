@@ -82,13 +82,22 @@ and for the National Population Register in Norway.
 
 ---
 
+## Useful TAX Links:
+
+- Tax for individuals: https://www.skatteetaten.no/en/person/taxes/
+- Tax liability in Norway: https://www.skatteetaten.no/en/person/taxes/get-the-taxes-right/abroad/tax-residence-in-norway-when-moving-to-or-from-norway/
+- Tax deduction and cards: https://www.skatteetaten.no/en/person/taxes/tax-deduction-card-and-advance-tax/
+- Tax assessment and settlement: https://www.skatteetaten.no/en/person/taxes/tax-assessment/
+
+---
+
 ## COMMON TAX QUESTIONS
 
 Q: What is the deadline for filing my tax return?
 A: 30 April for employees; 31 May for self-employed.
 
 Q: How do I get a tax refund?
-A: If the pre-filled return is correct and you are owed a refund, it is automatically
+A: If the pre-filled return is correct, and you are owed a refund, it is automatically
    paid after the tax settlement letter (skatteoppgjør) is issued (typically June–October).
 
 Q: What documents do I need for a tax return as an immigrant?
@@ -103,4 +112,31 @@ A: Yes. If the distance between home and primary workplace exceeds 37 km per day
 Q: As a new arrival, when am I liable for Norwegian tax?
 A: You become a tax resident in Norway after staying 183 days in any 12-month period,
    or 270 days within a 36-month period.
+
+Q: How do I change my tax card if I have multiple jobs?
+A: Log in to skatteetaten.no, go to 'Tax deduction card', and select the appropriate card for each employer.
+   The main card is for your primary job, and the secondary card is for additional jobs.
+   The secondary card applies a flat 50% tax rate to ensure sufficient withholding.
+
+Q: What are the items I can deduct from my taxable income?
+A: Common deductions include:
+- Basic allowance (minstefradrag)
+- Personal allowance (personfradrag)
+- Interest paid on loans
+- Union fees
+- Home office expenses (if applicable)
+- Commuting expenses (if distance exceeds 37 km/day)
+- Certain work-related expenses (if not reimbursed by employer)
+
+Q: What are the newcomers exemptions for the first 3 years?
+A: Newcomers to Norway may be eligible for a special tax exemption for the first three years of residence.
+   This exemption allows you to exclude up to 50% of your income from Norwegian taxation, provided you meet certain criteria,
+   such as having been a tax resident in another country for at least 10 of the last 15 years before moving to Norway.
+   This can significantly reduce your tax liability during the initial years of residence in Norway.
+   To apply for this exemption, you must submit a request to the Norwegian Tax Administration (Skatteetaten) and provide documentation of your previous tax residency.
+   It is important to note that this exemption is not automatic, and you must actively apply for it to benefit from the reduced tax rate.
+   Additionally, this exemption does not apply to income earned in Norway from Norwegian sources, such as employment or business income,
+   which will still be subject to Norwegian taxation.
+
+
 
