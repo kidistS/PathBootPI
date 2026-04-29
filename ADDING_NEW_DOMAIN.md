@@ -1,26 +1,30 @@
 # PathBoot PI – How to Add a New Domain
 
-> **Last updated:** 2026-04-27  
-> **Example used throughout:** adding an `EDUCATION` domain.  
-> All 7 changes are listed in the exact order they should be made.
+> **Last updated:** 2026-04-29
+> **Example used throughout:** adding an `EDUCATION` domain.
+> All 6 changes are listed in the exact order they should be made.
 
 ---
 
 ## Overview
 
-Adding a new domain requires changes in exactly **7 places**.  
-The pipeline, controller, session manager, and translation layer are **never touched** —
-they are all domain-agnostic by design.
+Adding a new domain requires changes in exactly **6 places**.
+The pipeline, controller, session manager, translation layer, and **`AgentFactory`** are
+**never touched** — they are all domain-agnostic by design.
+
+> ✅ **No AgentFactory wiring needed.**
+> `AgentFactory` injects `List<DomainAgent>` and auto-registers every `@Component` that
+> implements `DomainAgent`. Simply creating your new `@Component` agent is enough —
+> the factory discovers it automatically on startup.
 
 | Step | File | Type |
 |------|------|------|
 | 1 | `enums/DomainType.java` | Add enum constant |
 | 2 | `util/PathBootConstants.java` | Add keywords + constants |
 | 3 | `grounding/<domain>/<domain>-grounding.txt` | New knowledge file |
-| 4 | `agent/<domain>/<Domain>Agent.java` | New agent class |
-| 5 | `agent/factory/AgentFactory.java` | Wire agent into factory |
-| 6 | `service/classification/DomainClassificationService.java` | Add score to classifier |
-| 7 | Tests | Cover new domain |
+| 4 | `agent/<domain>/<Domain>Agent.java` | New agent class (`@Component`) |
+| 5 | `service/classification/DomainClassificationService.java` | Add score to classifier |
+| 6 | Tests | Cover new domain |
 
 ---
 
@@ -64,7 +68,7 @@ public static final String EDUCATION_DOMAIN_DISPLAY_NAME = "Norwegian Education 
 
 ## Step 3 — `src/main/resources/grounding/education/education-grounding.txt` *(new file)*
 
-Create the plain-text knowledge file that RAG will embed and search.  
+Create the plain-text knowledge file that RAG will embed and search.
 Separate topics with `---` so the chunker splits them into independent chunks:
 
 ```
@@ -107,8 +111,8 @@ Important for immigrants who obtained a degree abroad and need recognition for e
 or further study in Norway. Applications at nokut.no.
 ```
 
-> ⚠️ **Before the first restart after adding this file:**  
-> Delete `data/vector-store.json`.  
+> ⚠️ **Before the first restart after adding this file:**
+> Delete `data/vector-store.json`.
 > `RagGroundingService` will detect the missing file and re-embed all domains
 > (including the new one) automatically on startup.
 
@@ -116,9 +120,12 @@ or further study in Norway. Applications at nokut.no.
 
 ## Step 4 — `src/main/java/com/pathboot/agent/education/EducationAgent.java` *(new file)*
 
-Create a new package `agent/education/`.  
+Create a new package `agent/education/`.
 The agent only overrides 3 methods — RAG retrieval, prompt building, LLM call,
-and caching are all inherited from `AbstractDomainAgent`:
+and caching are all inherited from `AbstractDomainAgent`.
+
+**`AgentFactory` auto-discovers this bean via Spring's `List<DomainAgent>` injection —
+no factory wiring is needed.**
 
 ```java
 package com.pathboot.agent.education;
@@ -135,6 +142,9 @@ import org.springframework.stereotype.Component;
  * Domain agent for Norwegian Education questions (schools, universities,
  * student loans via Lånekassen, kindergarten, foreign credential recognition).
  * Uses RAG context from {@code grounding/education/education-grounding.txt}.
+ *
+ * <p>Registered automatically by {@link com.pathboot.agent.factory.AgentFactory}
+ * via Spring's {@code List<DomainAgent>} injection — no factory wiring required.</p>
  */
 @Component
 public class EducationAgent extends AbstractDomainAgent {
@@ -153,35 +163,7 @@ public class EducationAgent extends AbstractDomainAgent {
 
 ---
 
-## Step 5 — `src/main/java/com/pathboot/agent/factory/AgentFactory.java`
-
-Four edits in this file — import, field, constructor parameter, and one registry line:
-
-```java
-// 1. Add import at the top
-import com.pathboot.agent.education.EducationAgent;
-
-// 2. Add private field
-private final EducationAgent educationAgent;
-
-// 3. Add constructor parameter (at the end of the existing parameters)
-public AgentFactory(TaxAgent taxAgent,
-                    NavAgent navAgent,
-                    ImmigrationAgent immigrationAgent,
-                    EducationAgent educationAgent) {
-    this.taxAgent         = taxAgent;
-    this.navAgent         = navAgent;
-    this.immigrationAgent = immigrationAgent;
-    this.educationAgent   = educationAgent;
-}
-
-// 4. Add one line inside registerAgents()
-agentRegistry.put(DomainType.EDUCATION, educationAgent);
-```
-
----
-
-## Step 6 — `src/main/java/com/pathboot/service/classification/DomainClassificationService.java`
+## Step 5 — `src/main/java/com/pathboot/service/classification/DomainClassificationService.java`
 
 Three edits — add score variable, update log lines, extend `selectDomainByHighestScore`:
 
@@ -226,7 +208,7 @@ private DomainType selectDomainByHighestScore(int taxScore, int navScore,
 
 ---
 
-## Step 7 — Tests
+## Step 6 — Tests
 
 ### `src/test/java/com/pathboot/agent/factory/AgentFactoryTest.java`
 
@@ -234,8 +216,16 @@ private DomainType selectDomainByHighestScore(int taxScore, int navScore,
 // Add mock
 @Mock private EducationAgent educationAgent;
 
-// Update setUp() constructor call
-agentFactory = new AgentFactory(taxAgent, navAgent, immigrationAgent, educationAgent);
+// Update setUp() — stub getDomainType() and include in the list
+@BeforeEach
+void setUp() {
+    when(taxAgent.getDomainType()).thenReturn(DomainType.TAX);
+    when(navAgent.getDomainType()).thenReturn(DomainType.NAV);
+    when(immigrationAgent.getDomainType()).thenReturn(DomainType.IMMIGRATION);
+    when(educationAgent.getDomainType()).thenReturn(DomainType.EDUCATION);
+
+    agentFactory = new AgentFactory(List.of(taxAgent, navAgent, immigrationAgent, educationAgent));
+}
 
 // Add new test in SuccessfulResolution nested class
 @Test
@@ -247,7 +237,7 @@ void getAgentForDomain_education_shouldReturnEducationAgent() {
 
 // Update the registration test to include EDUCATION
 @Test
-@DisplayName("all four domains registered after registerAgents()")
+@DisplayName("all four domains registered after construction")
 void allFourDomains_registeredAfterInit() {
     assertThat(agentFactory.getAgentForDomain(DomainType.TAX)).isNotNull();
     assertThat(agentFactory.getAgentForDomain(DomainType.NAV)).isNotNull();
@@ -302,6 +292,7 @@ class EducationDomain {
 |------|--------------|
 | `ChatFacadeService` | Routes to any `DomainType` through `AgentFactory` — domain-agnostic |
 | `AbstractDomainAgent` | Template Method handles all domains — no subclass logic needed |
+| **`AgentFactory`** | **Auto-discovers new agents via `List<DomainAgent>` — no wiring needed** |
 | `RagGroundingService` | Domain is passed as a runtime parameter to every call |
 | `TranslationOrchestrationService` | Translation is language-driven, not domain-driven |
 | `UserSessionManager` | Sessions store turns for any domain without domain-specific logic |
@@ -317,9 +308,7 @@ class EducationDomain {
 [ ] 2. PathBootConstants.java        — add NEW_DOMAIN_KEYWORDS + GROUNDING_FILE + DISPLAY_NAME
 [ ] 3. <domain>-grounding.txt        — create knowledge file with --- separated topic sections
 [ ] 4. <Domain>Agent.java            — new @Component extending AbstractDomainAgent (3 overrides)
-[ ] 5. AgentFactory.java             — import + field + constructor param + agentRegistry.put()
-[ ] 6. DomainClassificationService   — new score var + extend selectDomainByHighestScore()
-[ ] 7. Tests                         — AgentFactoryTest + DomainClassificationServiceTest
-[ ] 8. Delete data/vector-store.json — forces RAG re-embed on next startup
+[ ] 5. DomainClassificationService   — new score var + extend selectDomainByHighestScore()
+[ ] 6. Tests                         — AgentFactoryTest + DomainClassificationServiceTest
+[ ] 7. Delete data/vector-store.json — forces RAG re-embed on next startup
 ```
-

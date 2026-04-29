@@ -10,15 +10,16 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,8 @@ public class RagGroundingService implements SmartInitializingSingleton {
 
     private final SimpleVectorStore vectorStore;
     private final DataGroundingLoader dataGroundingLoader;
+    /** Spring-managed builder – used to create properly configured RestTemplate instances. */
+    private final RestTemplateBuilder restTemplateBuilder;
 
     @Value("${rag.top-k:3}")
     private int defaultTopK;
@@ -57,9 +60,11 @@ public class RagGroundingService implements SmartInitializingSingleton {
     private volatile boolean vectorStoreReady = false;
 
     public RagGroundingService(SimpleVectorStore vectorStore,
-                                DataGroundingLoader dataGroundingLoader) {
-        this.vectorStore         = vectorStore;
-        this.dataGroundingLoader = dataGroundingLoader;
+                                DataGroundingLoader dataGroundingLoader,
+                                RestTemplateBuilder restTemplateBuilder) {
+        this.vectorStore          = vectorStore;
+        this.dataGroundingLoader  = dataGroundingLoader;
+        this.restTemplateBuilder  = restTemplateBuilder;
     }
 
     // ─── Startup document loading ─────────────────────────────────────────────
@@ -91,7 +96,10 @@ public class RagGroundingService implements SmartInitializingSingleton {
                 loadDomainFile(PathBootConstants.NAV_GROUNDING_FILE,         DomainType.NAV.name());
                 loadDomainFile(PathBootConstants.IMMIGRATION_GROUNDING_FILE, DomainType.IMMIGRATION.name());
 
-                storeFile.getParentFile().mkdirs();
+                File parentDir = storeFile.getParentFile();
+                if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
+                    logger.warn("[RAG] Could not create directory for vector store: {}", parentDir.getAbsolutePath());
+                }
                 vectorStore.save(storeFile);
                 logger.info("[RAG] Vector store persisted to: {}", storeFile.getAbsolutePath());
             }
@@ -133,10 +141,17 @@ public class RagGroundingService implements SmartInitializingSingleton {
     /**
      * Checks whether the configured embedding model is present in Ollama. If it is missing, issues a {@code POST /api/pull}
      * request to pull it automatically. This ensures the embedding model is available without requiring manual setup steps.
+     *
+     * <p>Both RestTemplate instances are built via the injected {@link RestTemplateBuilder} so they
+     * participate in Spring's auto-configured error handling and metrics (no raw {@code new RestTemplate()}).</p>
      */
     private void ensureEmbeddingModelAvailable() {
         try {
-            RestTemplate rt = new RestTemplate();
+            // Short-timeout template for the quick tags check.
+            RestTemplate rt = restTemplateBuilder
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .readTimeout(Duration.ofSeconds(10))
+                    .build();
             String tagsUrl = ollamaBaseUrl + "/api/tags";
             ResponseEntity<String> tagsResp = rt.getForEntity(tagsUrl, String.class);
 
@@ -145,14 +160,14 @@ public class RagGroundingService implements SmartInitializingSingleton {
                 return;
             }
 
-            // Model not present – pull it automatically
+            // Model not present – pull it automatically with a long read timeout.
             logger.info("[RAG] Embedding model '{}' not found in Ollama – pulling now "
                     + "(this may take several minutes on first run)…", embeddingModel);
 
-            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-            factory.setConnectTimeout(10_000);
-            factory.setReadTimeout(15 * 60 * 1_000);   // model download can take minutes
-            RestTemplate pullRt = new RestTemplate(factory);
+            RestTemplate pullRt = restTemplateBuilder
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .readTimeout(Duration.ofMinutes(15))   // model download can take minutes
+                    .build();
 
             Map<String, Object> pullBody = Map.of("name", embeddingModel, "stream", false);
             pullRt.postForEntity(ollamaBaseUrl + "/api/pull", pullBody, String.class);
@@ -195,7 +210,10 @@ public class RagGroundingService implements SmartInitializingSingleton {
 
     private void loadDomainFile(String classpathPath, String domainName) throws IOException {
         ClassPathResource resource = new ClassPathResource(classpathPath);
-        String rawContent = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        String rawContent;
+        try (var inputStream = resource.getInputStream()) {
+            rawContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
         List<Document> chunks = chunkIntoDocuments(rawContent, domainName, classpathPath);
         if (!chunks.isEmpty()) {
             vectorStore.add(chunks);

@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ChatResponse> handleTranslationException(TranslationException ex) {
         logger.error("Translation error: {}", ex.getMessage(), ex);
         return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE,
-                "Translation service encountered an error: " + ex.getMessage());
+                "The translation service is currently unavailable. Please try again later.");
     }
 
     // ─── LLM communication failure ───────────────────────────────────────────
@@ -69,7 +69,7 @@ public class GlobalExceptionHandler {
     // ─── Helper ──────────────────────────────────────────────────────────────
     private ResponseEntity<ChatResponse> buildErrorResponse(HttpStatus status, String message) {
         ChatResponse errorResponse = ChatResponse.builder()
-                .responseText("ERROR: " + message)
+                .responseText(message)
                 .detectedLanguage("UNKNOWN")
                 .detectedDomain("UNKNOWN")
                 .timestamp(LocalDateTime.now())

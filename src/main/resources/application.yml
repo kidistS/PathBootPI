@@ -27,10 +27,10 @@ spring:
         # SQLite does not support sequence-based generation; IDENTITY uses rowid autoincrement
         jakarta.persistence.schema-generation.database.action: none
   # ─── Cache (Caffeine in-memory) ──────────────────────────────────────────────
+  # Caffeine spec is configured programmatically in CacheConfig.java (the bean wins).
+  # The spec key below is intentionally removed to avoid misleading duplicate config.
   cache:
     type: caffeine
-    caffeine:
-      spec: maximumSize=500,expireAfterWrite=60m
   # ─── Spring AI – Ollama / Mistral ───────────────────────────────────────────
   ai:
     ollama:
@@ -75,6 +75,11 @@ api:
     users:
       admin: "pathboot-admin-2026"
       user: "pathboot-user-2026"
+    # Per-user API key mapping — each user receives their own key on login.
+    # Falls back to the first entry in api-keys if a username is not listed here.
+    user-keys:
+      admin: "pathboot-dev-key-2026"
+      user: "pathboot-local-key-001"
 # ─── Server ─────────────────────────────────────────────────────────────────
 server:
   port: 8080

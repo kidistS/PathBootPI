@@ -14,8 +14,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AgentFactory – Unit Tests")
@@ -29,8 +32,12 @@ class AgentFactoryTest {
 
     @BeforeEach
     void setUp() {
-        agentFactory = new AgentFactory(taxAgent, navAgent, immigrationAgent);
-        agentFactory.registerAgents();
+        // Stub getDomainType() so the factory can map each agent to its domain key.
+        when(taxAgent.getDomainType()).thenReturn(DomainType.TAX);
+        when(navAgent.getDomainType()).thenReturn(DomainType.NAV);
+        when(immigrationAgent.getDomainType()).thenReturn(DomainType.IMMIGRATION);
+
+        agentFactory = new AgentFactory(List.of(taxAgent, navAgent, immigrationAgent));
     }
 
     // ── Happy-path lookups ────────────────────────────────────────────────────
@@ -113,13 +120,14 @@ class AgentFactoryTest {
     // ── Registration ──────────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("registerAgents")
+    @DisplayName("Auto-registration via constructor")
     class Registration {
 
         @Test
-        @DisplayName("all three domains registered after registerAgents()")
+        @DisplayName("all three domains registered after construction")
         void allThreeDomains_registeredAfterInit() {
-            // If any were missing, getAgentForDomain would throw DomainNotFoundException
+            // Registration now happens in the constructor – no @PostConstruct needed.
+            // If any were missing, getAgentForDomain would throw DomainNotFoundException.
             assertThat(agentFactory.getAgentForDomain(DomainType.TAX)).isNotNull();
             assertThat(agentFactory.getAgentForDomain(DomainType.NAV)).isNotNull();
             assertThat(agentFactory.getAgentForDomain(DomainType.IMMIGRATION)).isNotNull();

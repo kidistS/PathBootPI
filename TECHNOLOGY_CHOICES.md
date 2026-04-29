@@ -1,7 +1,7 @@
 # PathBoot PI – Technology Choices & Rationale
 
 > **Audience:** developers joining or maintaining the project.  
-> **Last updated:** 2026-04-27
+> **Last updated:** 2026-04-29
 
 This document explains **every technology, library, and framework** used in PathBoot PI,
 and—critically—**why** each was chosen over the alternatives.
@@ -304,7 +304,8 @@ block the HTTP request thread.
 | Cache name | `domainAnswers` |
 | Max entries | 500 |
 | TTL | 60 minutes (expire-after-write) |
-| Key | `domainType + "_" + language + "_" + question` |
+| Key | `domainType + "_" + language + "_" + SHA256(question)` |
+| Configuration | Programmatic — `CacheConfig.java` (`CaffeineCacheManager` bean) |
 
 **Why cache LLM answers?**
 
@@ -312,12 +313,26 @@ LLM inference is slow (1–10 seconds). Many users ask the same common questions
 (e.g., "What is the income tax rate?"). Caching the answer for 60 minutes means
 the second requester gets an instant response.
 
+**Cache key — SHA-256 hashing:**
+
+The cache key includes a SHA-256 hash of the question text (via `CacheKeyUtil.hashQuestion()`)
+instead of the raw question string. This keeps all cache keys at a fixed 64-character length
+regardless of input length, preventing heap waste and slow string comparisons for long questions.
+
 **Why Caffeine?**
 
 - Fastest in-process cache available for the JVM (outperforms Guava Cache on benchmarks).
 - `recordStats()` enables JMX / Actuator metrics with no extra code.
 - Integrates with Spring's `@Cacheable` annotation — no changes to business logic.
 - TTL-based expiry prevents stale answers from accumulating indefinitely.
+
+**Why not configure Caffeine in `application.yml`?**
+
+Spring Boot auto-configuration supports a `spring.cache.caffeine.spec` YAML key, but when
+a `CacheManager` bean exists in the context **the bean always wins** — the YAML spec is
+silently ignored. To avoid misleading duplicate configuration, all Caffeine settings are
+managed exclusively in `CacheConfig.java` and the `spring.cache.caffeine.spec` key has
+been removed from `application.yml`.
 
 **Why not Redis?**
 
@@ -336,6 +351,7 @@ dependency for no benefit.
 | Queue capacity | 500 | Absorbs spikes without dropping tasks |
 | Thread name prefix | `pathboot-async-` | Identifies threads in logs |
 | Shutdown grace period | 30 s | Completes in-flight writes on JVM exit |
+| Rejected execution | `CallerRunsPolicy` | When the queue is full, run the task on the calling thread instead of silently dropping it — prevents undetected data loss under burst load |
 
 **Why async persistence?**
 
@@ -363,6 +379,18 @@ intercepts the call correctly.
 |------|---------|-------|---------|
 | Hot | `ConcurrentHashMap<String, UserSessionData>` | O(1) in-process | Fast per-request access |
 | Cold | SQLite via JPA (`UserSessionRepository`) | Disk I/O | Persistence across restarts |
+
+**Session ID validation:**
+
+Client-supplied session IDs are validated as proper UUID v4 strings (`UUID.fromString()`).
+An invalid or arbitrary string is silently discarded and a new UUID is generated —
+preventing session-ID pollution that could map unrelated requests to shared state.
+
+**Session history eviction — `ArrayDeque`:**
+
+The in-memory conversation history is backed by an `ArrayDeque<SessionTurn>` bounded by
+`maxHistorySize`. Evicting the oldest turn when the cap is reached is O(1) `pollFirst()`
+instead of the O(n) `ArrayList.remove(0)` that was used previously.
 
 **Lookup order on every request:**
 Memory → DB → create new session
@@ -567,7 +595,7 @@ If this order is wrong, MapStruct cannot see Lombok-generated accessors and prod
 | Pattern | Where |
 |---------|-------|
 | **Singleton** | Every `@Component` / `@Service` — Spring manages lifecycle |
-| **Factory + Multiton** | `AgentFactory` — registry of `DomainAgent` instances keyed by `DomainType` |
+| **Factory + Auto-discovery** | `AgentFactory` — injects `List<DomainAgent>` from the context and auto-registers each agent via its `getDomainType()` key; adding a new domain requires zero changes to the factory |
 | **Builder** | `ChatResponse`, `UserInteraction` — Lombok `@Builder` |
 
 ### Structural
@@ -608,9 +636,10 @@ ChatFacadeService  ──(Caffeine cache)──▶ domainAnswers (60 min TTL)
     ├── DomainClassificationService    (keyword scoring, no LLM call)
     │
     ├── AgentFactory
-    │      └── TaxAgent / NavAgent / ImmigrationAgent
+    │      └── TaxAgent / NavAgent / ImmigrationAgent   (auto-registered via List<DomainAgent>)
     │             ├── RagGroundingService  ──▶ SimpleVectorStore (nomic-embed-text)
     │             └── ChatClient (Spring AI) ──▶ Ollama / Mistral
+    │                   └── @Cacheable (Caffeine) ──▶ CacheKeyUtil.hashQuestion() (SHA-256 key)
     │
     ├── AsyncPersistenceService  (@Async, pool 2–4 threads)
     │      └── UserInteractionRepository  ──▶ SQLite (HikariCP pool=1, WAL)

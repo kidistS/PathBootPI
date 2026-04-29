@@ -104,11 +104,11 @@ public class ChatFacadeService {
                     .timestamp(LocalDateTime.now())
                     .build();
         }
-        DomainAgent domainAgent     = agentFactory.getAgentForDomain(detectedDomain);
-        Language agentInputLanguage = (detectedLanguage == Language.AMHARIC)
+        DomainAgent domainAgent      = agentFactory.getAgentForDomain(detectedDomain);
+        Language    agentInputLang   = (detectedLanguage == Language.AMHARIC)
                 ? Language.ENGLISH : detectedLanguage;
         String agentResponse = domainAgent.processUserQuestion(
-                questionForProcessing, resolvedSessionId, agentInputLanguage);
+                questionForProcessing, resolvedSessionId, agentInputLang);
         final String finalResponse;
         if (detectedLanguage == Language.AMHARIC) {
             finalResponse = translationOrchestrationService

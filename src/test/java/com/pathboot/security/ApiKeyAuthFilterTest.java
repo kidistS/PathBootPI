@@ -17,6 +17,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ApiKeyAuthFilter – Unit Tests")
@@ -144,6 +146,49 @@ class ApiKeyAuthFilterTest {
             filter.doFilterInternal(request, response, filterChain);
 
             assertThat(response.getContentAsString()).containsIgnoringCase("unauthorized");
+        }
+    }
+
+    // ── shouldNotFilter ───────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("Public paths skipped by shouldNotFilter")
+    class PublicPaths {
+
+        @ParameterizedTest(name = "[{index}] \"{0}\" is a public path → shouldNotFilter = true")
+        @ValueSource(strings = {
+            "/swagger-ui/index.html",
+            "/swagger-ui",
+            "/api-docs",
+            "/v3/api-docs",
+            "/v3/api-docs/swagger-config",
+            "/webjars/swagger-ui/swagger-ui.js",
+            "/api/v1/auth/login",
+            "/api/v1/auth",
+            "/actuator/health",
+            "/actuator/info",
+            "/error"
+        })
+        @DisplayName("public path is exempted from API-key check")
+        void publicPaths_shouldBeExemptedFromFilter(String path) throws Exception {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setServletPath(path);
+
+            assertThat(filter.shouldNotFilter(request)).isTrue();
+        }
+
+        @ParameterizedTest(name = "[{index}] \"{0}\" is a protected path → shouldNotFilter = false")
+        @ValueSource(strings = {
+            "/api/v1/chat",
+            "/api/v1/chat/sessions/abc/history",
+            "/api/v1/anything"
+        })
+        @DisplayName("protected API path is NOT exempted from filter")
+        void protectedPaths_shouldNotBeExempted(String path) throws Exception {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setServletPath(path);
+
+            assertThat(filter.shouldNotFilter(request)).isFalse();
         }
     }
 }

@@ -5,8 +5,10 @@ import com.pathboot.enums.Language;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 
 /**
@@ -21,14 +23,15 @@ public class UserSessionData {
 
     private final String sessionId;
     private final LocalDateTime sessionStartTime;
-    private final List<SessionTurn> conversationHistory;
+    /** Bounded deque – O(1) add at tail and O(1) eviction from head. */
+    private final Deque<SessionTurn> history;
     private final int maxHistorySize;
 
     public UserSessionData(String sessionId, int maxHistorySize) {
-        this.sessionId         = sessionId;
-        this.sessionStartTime  = LocalDateTime.now();
-        this.conversationHistory = new ArrayList<>();
-        this.maxHistorySize    = maxHistorySize;
+        this.sessionId      = sessionId;
+        this.sessionStartTime = LocalDateTime.now();
+        this.history        = new ArrayDeque<>(maxHistorySize);
+        this.maxHistorySize = maxHistorySize;
     }
 
     /**
@@ -44,10 +47,10 @@ public class UserSessionData {
                                      String systemResponse,
                                      Language detectedLanguage,
                                      DomainType detectedDomain) {
-        if (conversationHistory.size() >= maxHistorySize) {
-            conversationHistory.remove(0);
+        if (history.size() >= maxHistorySize) {
+            history.pollFirst();   // O(1) – no array shifting
         }
-        conversationHistory.add(SessionTurn.builder()
+        history.addLast(SessionTurn.builder()
                 .userInput(userInput)
                 .systemResponse(systemResponse)
                 .detectedLanguage(detectedLanguage)
@@ -57,12 +60,11 @@ public class UserSessionData {
     }
 
     /**
-     * Returns an unmodifiable view of the conversation history.
+     * Returns an unmodifiable snapshot of the conversation history in chronological order.
      *
      * @return read-only list of session turns
      */
     public List<SessionTurn> getConversationHistory() {
-        return Collections.unmodifiableList(conversationHistory);
+        return Collections.unmodifiableList(new ArrayList<>(history));
     }
 }
-

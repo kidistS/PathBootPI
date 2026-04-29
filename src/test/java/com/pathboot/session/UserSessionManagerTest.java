@@ -31,7 +31,7 @@ class UserSessionManagerTest {
 
     private UserSessionManager sessionManager;
 
-    private static final String SESSION_ID     = "test-session-001";
+    private static final String SESSION_ID     = "550e8400-e29b-41d4-a716-446655440001";  // valid UUID
     private static final String USER_INPUT     = "What is tax?";
     private static final String SYSTEM_RESP    = "Tax is a levy.";
 
@@ -231,9 +231,10 @@ class UserSessionManagerTest {
         @Test
         @DisplayName("unknown sessionId not in memory or DB → returns empty list")
         void unknownSession_shouldReturnEmptyList() {
-            when(userSessionRepository.findBySessionId("unknown-id")).thenReturn(Optional.empty());
+            String unknownId = "00000000-0000-0000-0000-000000000000";
+            when(userSessionRepository.findBySessionId(unknownId)).thenReturn(Optional.empty());
 
-            List<SessionTurn> history = sessionManager.getSessionHistory("unknown-id");
+            List<SessionTurn> history = sessionManager.getSessionHistory(unknownId);
 
             assertThat(history).isEmpty();
         }

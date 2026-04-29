@@ -44,8 +44,11 @@ public class DataGroundingLoader {
         logger.info("Loading grounding file from classpath: {}", classpathFilePath);
         try {
             ClassPathResource resource = new ClassPathResource(classpathFilePath);
-            byte[] bytes = resource.getInputStream().readAllBytes();
-            String content = new String(bytes, StandardCharsets.UTF_8);
+            // try-with-resources guarantees the stream is closed even on exception.
+            String content;
+            try (var inputStream = resource.getInputStream()) {
+                content = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            }
             logger.debug("Grounding file loaded ({} chars): {}", content.length(), classpathFilePath);
             return content;
         } catch (IOException ex) {
@@ -55,4 +58,3 @@ public class DataGroundingLoader {
         }
     }
 }
-

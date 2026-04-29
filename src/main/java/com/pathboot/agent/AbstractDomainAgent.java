@@ -30,7 +30,9 @@ public abstract class AbstractDomainAgent implements DomainAgent {
     @Override
     @Cacheable(
         value = CacheConfig.DOMAIN_ANSWERS_CACHE,
-        key  = "#root.target.getDomainType().name() + '_' + #userLanguage.name() + '_' + #userQuestion"
+        // SHA-256 the question so key length is fixed at 64 chars regardless of input length,
+        // preventing heap waste and slow string comparisons for very long questions.
+        key  = "#root.target.getDomainType().name() + '_' + #userLanguage.name() + '_' + T(com.pathboot.util.CacheKeyUtil).hashQuestion(#userQuestion)"
     )
     public String processUserQuestion(String userQuestion, String sessionId, Language userLanguage) {
         logger.info("[{}] session={} lang={}: {}", getDomainType(), sessionId, userLanguage, abbreviate(userQuestion));

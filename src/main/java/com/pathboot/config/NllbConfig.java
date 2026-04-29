@@ -22,9 +22,9 @@ public class NllbConfig {
     private String nllbServerBaseUrl;
     @Value("${nllb.server.translate-endpoint}")
     private String translateEndpoint;
-    @Value("${nllb.server.connect-timeout-ms:3000}")
+    @Value("${nllb.server.connect-timeout-ms:5000}")
     private int connectTimeoutMs;
-    @Value("${nllb.server.read-timeout-ms:8000}")
+    @Value("${nllb.server.read-timeout-ms:120000}")
     private int readTimeoutMs;
     /**
      * Returns the full URL for the NLLB translation endpoint.

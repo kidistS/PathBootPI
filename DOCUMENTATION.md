@@ -1,11 +1,13 @@
 # PathBoot PI – Step-by-Step Technical Documentation
 
+> Last updated: 2026-04-29
+
 ## 1. Project Goal
 
 PathBoot PI is a multilingual domain Q&A system designed to help immigrants and others
 access information about Norwegian Tax, NAV (labour & welfare), and Immigration procedures.
 Users may ask questions in English, Amharic, or Norwegian and will receive answers in the
-same language they used.
+same language they used. Access is secured via API key authentication.
 
 ---
 
@@ -17,14 +19,21 @@ The application follows a **layered architecture**:
 HTTP Request
     │
     ▼
+[ApiKeyAuthFilter]        ← Security: validates X-API-Key header (public paths skipped)
+    │
+    ▼
+[AuthController]          ← POST /api/v1/auth/login (always public — returns API key)
+    │
+    ▼
 [ChatController]          ← Layer 1: REST API (Spring MVC)
     │
     ▼
 [ChatFacadeService]       ← Layer 2: Facade / Orchestrator
     │
-    ├─[LanguageDetectionUtil]            detect language (Unicode heuristics)
+    ├─[LanguageDetectionUtil]            detect language (Unicode script + Norwegian keywords)
     ├─[TranslationOrchestrationService]  route to Ollama (Norwegian) or NLLB (Amharic)
     ├─[DomainClassificationService]      classify domain via fast keyword scoring (no LLM call)
+    │     └── UNKNOWN → short-circuit: return static clarification message in user's language
     ├─[AgentFactory]  ──────────────     get the right domain agent
     │     └─[TaxAgent / NavAgent / ImmigrationAgent]
     │           ├─[RagGroundingService]  retrieve top-3 relevant chunks (SimpleVectorStore)
@@ -44,96 +53,143 @@ HTTP Request
 > [`TECHNOLOGY_CHOICES.md`](./TECHNOLOGY_CHOICES.md).
 
 ### Java 17 + Spring Boot 3.4.5
-Spring Boot 3.x requires Java 17+ (Jakarta EE). It provides:
-- Auto-configured beans (data source, JPA, web MVC, async executor, cache)
-- Spring AI integration for LLM calls and RAG vector store
-- Production-grade embedded server (Tomcat)
+Spring Boot 3.x requires Java 17+ (Jakarta EE). Provides auto-configured beans, Spring AI
+integration, production-grade embedded Tomcat, and Spring Security.
+
+### Spring Security 3.4.5
+Provides the `SecurityFilterChain` and `OncePerRequestFilter` infrastructure for API key
+enforcement. Configured as fully stateless (no sessions, no CSRF). Public paths (Swagger,
+actuator, login) bypass the filter via `shouldNotFilter()`.
 
 ### Spring AI 1.0.5
-Provides the `ChatClient` abstraction over Ollama, the `SimpleVectorStore` for RAG, and
-the `EmbeddingModel` for `nomic-embed-text`. Integrates natively with Spring `@Cacheable`
-and `@Async`.
+Provides `ChatClient` over Ollama, `SimpleVectorStore` for RAG, and `EmbeddingModel`
+for `nomic-embed-text`.
 
 ### Ollama + Mistral (local LLM)
-Ollama runs LLMs locally with no API key or data leaving the machine. Mistral is chosen
-because it handles both English and Norwegian, fits in 8 GB VRAM, and can be pinned
-permanently in RAM (`keep-alice: "-1m"`) to eliminate cold-start latency.
+Runs locally with no data leaving the machine. Handles English and Norwegian. Pinned
+permanently in RAM (`keep-alive: "-1m"`) to eliminate cold-start latency.
 
 ### nomic-embed-text + SimpleVectorStore (RAG)
-`nomic-embed-text` (274 MB, via Ollama) embeds grounding file chunks into a
-`SimpleVectorStore`. On first run embeddings are computed and saved to
-`./data/vector-store.json`; subsequent restarts load in milliseconds. RAG injects only
-the top-3 relevant chunks per query, keeping prompts inside the 1 024-token context window.
+Embeds grounding file chunks; saves to `./data/vector-store.json` on first run.
+RAG injects the top-3 relevant chunks per query inside the 1 024-token context window.
 
 ### NLLB-200-Distilled-600M (Amharic translation)
-The Meta NLLB model provides high-quality translation for low-resource languages including
-Amharic (amh_Ethi). A lightweight Flask sidecar (`nllb_server.py`) wraps the HuggingFace
-Transformers pipeline and exposes a simple JSON REST endpoint at `localhost:5000`.
+Meta NLLB model for Amharic (amh_Ethi). Lightweight Flask sidecar (`nllb_server.py`)
+exposes a JSON REST endpoint at `localhost:5000`.
 
-### SQLite (persistent database)
-SQLite stores all user interactions and sessions as a single file (`./data/pathboot-data.db`).
-WAL journal mode allows concurrent reads; HikariCP pool size is set to 1 to serialise
-writes and eliminate `SQLITE_BUSY` errors. H2 is used **only for automated tests**.
-
-### Caffeine (in-memory cache)
-LLM answers are cached for 60 minutes (max 500 entries) keyed by domain + language + question.
-Identical questions get instant responses without an extra Ollama call.
-
-### Log4j2
-Log4j2 provides async appenders, rolling file policies, and finer-grained configuration
-compared to Logback (Spring's default is explicitly excluded from all starters).
+### SQLite + Caffeine
+SQLite stores all interactions and sessions as a single file. WAL mode + pool-size=1
+prevents `SQLITE_BUSY`. H2 is used **only for automated tests**.
+Caffeine caches LLM answers for 60 minutes (max 500 entries).
 
 ---
 
 ## 4. Request Processing Pipeline (Step by Step)
 
 **Step 1 – Language Detection (`LanguageDetectionUtil`)**
-- Scans Unicode code points.
-- Ethiopic range (U+1200–U+137F) → AMHARIC
-- Characters æ/ø/å → NORWEGIAN
+- Scans Unicode code points for Ethiopic script (U+1200–U+137F) → AMHARIC
+- Checks for Norwegian special characters æ/ø/å → NORWEGIAN
+- **Also checks for uniquely Norwegian indicator words** (e.g. `hva`, `ikke`, `dagpenger`,
+  `innvandring`, `skatt`) so Norwegian sentences without special characters are correctly detected.
 - Otherwise → ENGLISH
 
 **Step 2 – Translate to English (`TranslationOrchestrationService`)**
 - AMHARIC → ENGLISH: HTTP POST to NLLB server (`nllb_server.py`)
-- NORWEGIAN → pass-through: agent receives Norwegian text; Mistral is prompted to answer in Norwegian (saves one LLM round-trip)
+- NORWEGIAN → pass-through: agent receives Norwegian text directly; Mistral is prompted to answer in Norwegian
 - ENGLISH: no-op
 
 **Step 3 – Classify Domain (`DomainClassificationService`)**
 - Fast keyword scoring — **no LLM call** needed.
 - Counts keyword hits per domain (TAX / NAV / IMMIGRATION) after lowercasing the text.
-- Returns the domain with the highest score; tie or zero hits → `UNKNOWN` → fallback domain.
+- Returns the domain with the highest score; tie or zero hits → `UNKNOWN`.
+- **If `UNKNOWN`:** short-circuit immediately — no agent is called. A static pre-written
+  clarification message is returned in the user's own language (English / Norwegian / Amharic).
+  This saves one full LLM call and one translation call.
 
 **Step 4 – Route to Agent (`AgentFactory.getAgentForDomain()`)**
-- Factory pattern: looks up the registered `DomainAgent` for the detected domain.
+- `AgentFactory` injects `List<DomainAgent>` from the Spring context and auto-registers
+  every `@Component` that implements `DomainAgent` — keyed by `getDomainType()`.
+- No manual wiring is needed; adding a new domain only requires a new `@Component` class.
+- Only reached when domain is TAX, NAV, or IMMIGRATION (never UNKNOWN).
 
 **Step 5 – Generate Answer (`AbstractDomainAgent.processUserQuestion()`)**
 - Template Method pattern:
-  1. `RagGroundingService.findRelevantContext()` — retrieves the top-3 most relevant
-     chunks from the pre-embedded `SimpleVectorStore` (filtered by domain metadata).
-  2. Build system prompt (domain context + RAG chunks injected).
-  3. Call Ollama chat: `chatClient.prompt().system(…).user(question).call().content()`
-  4. Result cached via `@Cacheable` (Caffeine, 60 min TTL).
+  1. `RagGroundingService.findRelevantContext()` — top-3 most relevant chunks
+  2. Build system prompt (domain + RAG chunks + language hint)
+  3. Call Ollama chat
+  4. Result cached via `@Cacheable` (Caffeine, 60 min TTL; key uses SHA-256 of the question
+     so cache keys are always 64 chars regardless of question length)
 
 **Step 6 – Translate Answer Back**
-- Same as Step 2 but reversed direction.
 - ENGLISH → AMHARIC: NLLB server
-- ENGLISH → NORWEGIAN: already answered in Norwegian (see Step 2)
+- NORWEGIAN: answer already in Norwegian (see Step 2)
+- UNKNOWN: static string already in the correct language — no translation call
 
 **Step 7 – Persist (`AsyncPersistenceService`)**
-- Saves `UserInteraction` entity to **SQLite** asynchronously (`@Async`).
-- Non-fatal: if persistence fails, the response is still returned.
-- Runs on the `pathboot-async-` thread pool (core 2, max 4, queue 500).
+- Saves `UserInteraction` entity to SQLite asynchronously (`@Async`).
+- Called even for UNKNOWN domain — the interaction is recorded with `DomainType.UNKNOWN`.
 
 **Step 8 – Update Session (`UserSessionManager`)**
-- Appends the turn (question + answer) to the in-memory session store.
-- Oldest turns are evicted when the cap (20) is reached.
+- Appends the turn to the in-memory session store (cap: 20 turns).
+- Called even for UNKNOWN domain.
 
 ---
 
-## 5. Data Grounding Files
+## 5. Security
+
+### Authentication Model: API Key
+
+All `/api/v1/chat` endpoints require a valid `X-API-Key` request header.
+Authentication is stateless — no cookies, no sessions, no JWT.
+
+| Path | Protected? |
+|------|-----------|
+| `/swagger-ui/**`, `/webjars/**`, `/api-docs/**` | ✅ Public |
+| `/actuator/health`, `/actuator/info` | ✅ Public |
+| `/api/v1/auth/login` | ✅ Public |
+| `/api/v1/chat/**` | 🔒 Requires X-API-Key |
+
+### Getting a Key
+
+```
+POST /api/v1/auth/login
+Body: { "username": "admin", "password": "pathboot-admin-2026" }
+→ Response: { "apiKey": "pathboot-dev-key-2026", ... }
+```
+
+### Configuration (no code change needed)
+
+```yaml
+api:
+  security:
+    enabled: true               # set false to disable for local dev
+    api-keys:
+      - "pathboot-dev-key-2026"
+      - "pathboot-local-key-001"
+    users:
+      admin: "pathboot-admin-2026"
+      user: "pathboot-user-2026"
+    # Each user receives their own key on login.
+    # Falls back to the first api-keys entry if a username is not listed here.
+    user-keys:
+      admin: "pathboot-dev-key-2026"
+      user: "pathboot-local-key-001"
+```
+
+### Key Classes
+
+| Class | Role |
+|-------|------|
+| `ApiKeyAuthFilter` | Reads `X-API-Key` header; returns 401 JSON if missing/invalid; skips public paths via `shouldNotFilter()` |
+| `SecurityConfig` | Defines `SecurityFilterChain`; registers `ApiKeyAuthFilter` before `UsernamePasswordAuthenticationFilter` |
+| `ApiSecurityProperties` | `@ConfigurationProperties(prefix="api.security")` — binds YAML list and map correctly |
+| `AuthController` | `POST /api/v1/auth/login` — validates credentials, returns API key + `Location: /api/v1/chat` |
+
+---
+
+## 6. Data Grounding Files
 
 Each domain agent reads a plain-text grounding file from the classpath at first use.
-The content is cached forever (Flyweight pattern) so disk I/O is one-time.
 
 | File | Covers |
 |------|--------|
@@ -145,7 +201,7 @@ To update domain knowledge: edit the relevant `.txt` file and restart the applic
 
 ---
 
-## 6. Session Management
+## 7. Session Management
 
 Sessions use a **two-tier storage strategy**:
 
@@ -154,29 +210,22 @@ Sessions use a **two-tier storage strategy**:
 | Hot | `ConcurrentHashMap<String, UserSessionData>` | O(1) in-process | Fast per-request access |
 | Cold | SQLite via JPA (`UserSessionRepository`) | Disk I/O | Persistence across restarts |
 
-**Lookup order on every request:** memory → DB → create new session.
-
-Each session has:
-- A UUID session ID (generated server-side if the client does not provide one)
-- A capped list of `SessionTurn` objects (max 20)
-- Conversation history serialised as JSON in the `user_sessions` table
-
-**Sessions survive restarts** via the cold tier. When a client reconnects with a known
-session ID after a server restart, the session history is restored from SQLite into memory.
-
-To scale horizontally, replace the hot tier with Spring Session backed by Redis:
-`spring.session.store-type=redis`.
+Each session has a UUID ID (client-supplied IDs are validated as UUID format; invalid
+strings result in a new generated UUID to prevent session-ID pollution), a capped history
+of `SessionTurn` objects (max 20, stored in an `ArrayDeque` for O(1) eviction), and
+conversation history serialised as JSON in the `user_sessions` table. Session is updated
+even on UNKNOWN domain responses.
 
 ---
 
-## 7. Design Patterns Quick Reference
+## 8. Design Patterns Quick Reference
 
 ### Creational
 | Pattern | Class |
 |---------|-------|
 | Singleton | All `@Component` / `@Service` beans |
-| Factory + Multiton | `AgentFactory` – registry of agents keyed by `DomainType` |
-| Builder | `ChatResponse`, `UserInteraction` (`@Builder` via Lombok) |
+| Factory + Auto-discovery | `AgentFactory` – injects `List<DomainAgent>`; auto-registers every `@Component` agent via `getDomainType()` key |
+| Builder | `ChatResponse`, `AuthResponse`, `UserInteraction` (`@Builder` via Lombok) |
 
 ### Structural
 | Pattern | Class |
@@ -184,6 +233,7 @@ To scale horizontally, replace the hot tier with Spring Session backed by Redis:
 | Facade | `ChatFacadeService` |
 | Adapter | `OllamaTranslationService`, `NllbTranslationService` |
 | Flyweight | `DataGroundingLoader` – shared cached grounding content |
+| Filter | `ApiKeyAuthFilter` – `OncePerRequestFilter` |
 
 ### Behavioural
 | Pattern | Class |
@@ -194,12 +244,11 @@ To scale horizontally, replace the hot tier with Spring Session backed by Redis:
 
 ---
 
-## 8. Adding a New Domain
+## 9. Adding a New Domain
 
-> 📄 Full step-by-step guide with exact code for all 7 files:
-> **[ADDING_NEW_DOMAIN.md](./ADDING_NEW_DOMAIN.md)**
+> 📄 Full step-by-step guide: **[ADDING_NEW_DOMAIN.md](./ADDING_NEW_DOMAIN.md)**
 
-**Summary — 7 files to change, nothing else:**
+**Summary — 6 files to change, `AgentFactory` is NOT touched:**
 
 | Step | File |
 |------|------|
@@ -207,56 +256,61 @@ To scale horizontally, replace the hot tier with Spring Session backed by Redis:
 | 2 | `util/PathBootConstants.java` — add keywords array + 2 constants |
 | 3 | `grounding/<domain>/<domain>-grounding.txt` — new knowledge file |
 | 4 | `agent/<domain>/<Domain>Agent.java` — new `@Component`, 3 method overrides |
-| 5 | `agent/factory/AgentFactory.java` — wire new agent into registry |
-| 6 | `service/classification/DomainClassificationService.java` — add score to classifier |
-| 7 | Tests — `AgentFactoryTest` + `DomainClassificationServiceTest` |
+| 5 | `service/classification/DomainClassificationService.java` — add score to classifier |
+| 6 | Tests — `AgentFactoryTest` + `DomainClassificationServiceTest` |
+
+> ✅ `AgentFactory` automatically discovers the new agent via `List<DomainAgent>` injection —
+> no factory wiring is needed for new domains.
 
 > ⚠️ Delete `data/vector-store.json` before the first restart so RAG re-embeds all domains.
 
 ---
 
-## 9. Adding a New Language
+## 10. Adding a New Language
 
 1. Add the new language to the `Language` enum.
-2. Add detection logic in `LanguageDetectionUtil.detectLanguage()`.
+2. Add detection logic in `LanguageDetectionUtil.detectLanguage()` (script check or keyword set).
 3. Add NLLB language code in `PathBootConstants` (if NLLB supports it).
 4. Implement or extend a `TranslationService` for the new pair.
 5. Register the new service in `TranslationOrchestrationService.resolveTranslationService()`.
+6. Add a `CLARIFICATION_MESSAGE_<LANGUAGE>` constant in `PathBootConstants` for the UNKNOWN domain path.
 
 ---
 
-## 10. Environment Variables & Secrets
+## 11. Environment Variables & Secrets
 
-All configuration lives in `application.yml`. No API keys are required for the default setup.
-
-If you later integrate a cloud LLM (e.g., OpenAI), add:
 ```yaml
-openai:
-  api-key: ${OPENAI_API_KEY}
+api:
+  security:
+    api-keys:
+      - "${PATHBOOT_API_KEY_1:pathboot-dev-key-2026}"   # env var with fallback
+    users:
+      admin: "${PATHBOOT_ADMIN_PASSWORD:pathboot-admin-2026}"
 ```
-And set the environment variable:
+
 ```powershell
-$env:OPENAI_API_KEY = "sk-..."
+$env:PATHBOOT_API_KEY_1 = "my-production-key"
+$env:PATHBOOT_ADMIN_PASSWORD = "strong-password"
+.\mvnw.cmd spring-boot:run
 ```
-Never hard-code API keys in source files.
+
+Never hard-code credentials in source files. In production use a secrets manager.
 
 ---
 
-## 11. Database Schema
-
-The following tables are auto-created by Hibernate (`ddl-auto: update`):
+## 12. Database Schema
 
 ### `user_interactions`
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | BIGINT (PK) | Auto-increment (SQLite rowid) |
+| id | BIGINT (PK) | Auto-increment |
 | session_id | VARCHAR | Client session UUID |
 | original_input | TEXT | Raw user text |
 | detected_language | VARCHAR | ENGLISH / AMHARIC / NORWEGIAN |
-| translated_input | TEXT | English translation (null if input was already English) |
-| detected_domain | VARCHAR | TAX / NAV / IMMIGRATION |
-| generated_response_english | TEXT | English answer from agent |
+| translated_input | TEXT | English translation (null if already English) |
+| detected_domain | VARCHAR | TAX / NAV / IMMIGRATION / **UNKNOWN** |
+| generated_response_english | TEXT | English agent response (UNKNOWN: static English clarification) |
 | final_response | TEXT | Response in user's original language |
 | created_at | TIMESTAMP | Auto-set by Hibernate |
 
@@ -269,20 +323,17 @@ The following tables are auto-created by Hibernate (`ddl-auto: update`):
 | conversation_history_json | TEXT | JSON array of `SessionTurn` |
 | last_updated | TIMESTAMP | Updated on every turn |
 
-**Database file:** `./data/pathboot-data.db`  
-**WAL mode** is enabled for concurrent reads.  
-No H2 console is available in production — use the `sqlite3` CLI or DB Browser for SQLite.
-
 ---
 
-## 12. Known Limitations & Future Improvements
+## 13. Known Limitations & Future Improvements
 
 | Limitation | Suggested Improvement |
 |------------|-----------------------|
-| Language detection is heuristic | Integrate a proper language-ID library (e.g., `lingua`) |
-| Sessions lost if cold-tier SQLite is deleted | Add Spring Session + Redis for distributed persistence |
+| Language detection uses heuristics | Integrate a proper language-ID library (e.g., `lingua`) |
+| Sessions lost if SQLite is deleted | Add Spring Session + Redis for distributed persistence |
 | RAG uses `SimpleVectorStore` (in-process JSON) | Migrate to PGVector or Qdrant for large-scale deployments |
-| No authentication | Add Spring Security + JWT for multi-tenant deployments |
+| API key auth (no per-user identity beyond key) | Add JWT for fine-grained roles and per-user audit trails |
 | NLLB slow on CPU | Add GPU support or replace with a faster model |
 | No rate limiting | Add Bucket4j or Spring Cloud Gateway rate limiting |
 | Domain classification is keyword-only | Add an ML classifier (e.g., fine-tuned BERT) for edge cases |
+| Credentials hardcoded in `application.yml` | Inject via `${ENV_VAR}` or use Spring Cloud Config / Vault |

@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 public class AsyncConfig implements AsyncConfigurer {
@@ -25,8 +26,11 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setThreadNamePrefix("pathboot-async-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
+        // Instead of silently dropping tasks when the queue is full, run them on the
+        // calling thread. This prevents undetected data loss under burst load.
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
-        logger.info("Async task executor initialised – core: 2, max: 4, queue: 500");
+        logger.info("Async task executor initialised – core: 2, max: 4, queue: 500, rejected: CallerRunsPolicy");
         return executor;
     }
 

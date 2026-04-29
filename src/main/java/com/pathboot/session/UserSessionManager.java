@@ -148,6 +148,14 @@ public class UserSessionManager {
             logger.debug("No session ID provided – generated: {}", newId);
             return newId;
         }
-        return sessionId;
+        // Validate UUID format to prevent session-ID pollution with arbitrary strings.
+        try {
+            UUID.fromString(sessionId);
+            return sessionId;
+        } catch (IllegalArgumentException ex) {
+            String newId = UUID.randomUUID().toString();
+            logger.warn("Invalid session ID format '{}' – discarding and generating new: {}", sessionId, newId);
+            return newId;
+        }
     }
 }

@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 
@@ -71,15 +73,24 @@ public class AuthController {
         Map<String, String> users = securityProperties.getUsers();
         String storedPassword = users.get(authRequest.getUsername());
 
-        if (storedPassword == null || !storedPassword.equals(authRequest.getPassword())) {
+        // Constant-time comparison prevents timing-based username enumeration attacks.
+        boolean passwordMatch = storedPassword != null &&
+                MessageDigest.isEqual(
+                        storedPassword.getBytes(StandardCharsets.UTF_8),
+                        authRequest.getPassword().getBytes(StandardCharsets.UTF_8));
+
+        if (!passwordMatch) {
             logger.warn("Login failed for user: {}", authRequest.getUsername());
             return ResponseEntity.status(401)
                     .body(Map.of("error", "Unauthorized",
                                  "message", "Invalid username or password."));
         }
 
+        // Resolve a per-user key first; fall back to the first key in the global list.
         List<String> keys = securityProperties.getApiKeys();
-        String apiKey = keys.isEmpty() ? "" : keys.get(0);
+        String apiKey = securityProperties.getUserKeys()
+                .getOrDefault(authRequest.getUsername(),
+                              keys.isEmpty() ? "" : keys.get(0));
 
         logger.info("Login successful for user: {} – redirecting to {}", authRequest.getUsername(), CHAT_URI);
 

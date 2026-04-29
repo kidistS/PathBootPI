@@ -62,6 +62,21 @@ class LanguageDetectionUtilTest {
         assertThat(languageDetectionUtil.detectLanguage(norwegianText)).isEqualTo(Language.NORWEGIAN);
     }
 
+    @ParameterizedTest(name = "[{index}] \"{0}\"")
+    @ValueSource(strings = {
+        "Hva er trinnskatt?",
+        "Jeg vil vite mer om innvandring",
+        "Hvordan beregner jeg dagpenger",
+        "Ikke alle vet om dette",
+        "Hva er skatt i Norge",
+        "Kan jeg fa hjelp fra arbeidsgiver",
+        "Jeg trenger informasjon om trygd"
+    })
+    @DisplayName("detectLanguage – Norwegian sentences WITHOUT æ/ø/å should still return NORWEGIAN")
+    void detectLanguage_norwegianWithoutSpecialChars_shouldReturnNorwegian(String text) {
+        assertThat(languageDetectionUtil.detectLanguage(text)).isEqualTo(Language.NORWEGIAN);
+    }
+
     // ── Amharic detection ─────────────────────────────────────────────────────
 
     @Test
