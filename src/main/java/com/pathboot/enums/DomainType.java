@@ -1,10 +1,13 @@
 package com.pathboot.enums;
 
+import lombok.Getter;
+
 /**
  * Represents the supported knowledge domains of the application.
  *
  * <p>Each domain has a dedicated agent, prompt, and data-grounding file.</p>
  */
+@Getter
 public enum DomainType {
 
     /** Norwegian tax (Skatteetaten) domain. */
@@ -25,8 +28,5 @@ public enum DomainType {
         this.displayName = displayName;
     }
 
-    public String getDisplayName() {
-        return displayName;
-    }
 }
 

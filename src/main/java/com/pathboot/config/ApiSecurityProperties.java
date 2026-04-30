@@ -1,5 +1,7 @@
 package com.pathboot.config;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -12,10 +14,11 @@ import java.util.Map;
  * Binds the {@code api.security.*} block from {@code application.yml}.
  * Uses @ConfigurationProperties instead of @Value so YAML lists/maps are bound correctly.
  */
+@Setter
+@Getter
 @Component
 @ConfigurationProperties(prefix = "api.security")
-public class ApiSecurityProperties {
-
+public class ApiSecurityProperties{
     private boolean enabled = true;
     private List<String> apiKeys = new ArrayList<>();
     /** username → password pairs for the login endpoint. */
@@ -26,15 +29,4 @@ public class ApiSecurityProperties {
      */
     private Map<String, String> userKeys = new HashMap<>();
 
-    public boolean isEnabled()                       { return enabled; }
-    public void setEnabled(boolean enabled)          { this.enabled = enabled; }
-
-    public List<String> getApiKeys()                 { return apiKeys; }
-    public void setApiKeys(List<String> apiKeys)     { this.apiKeys = apiKeys; }
-
-    public Map<String, String> getUsers()            { return users; }
-    public void setUsers(Map<String, String> users)  { this.users = users; }
-
-    public Map<String, String> getUserKeys()                  { return userKeys; }
-    public void setUserKeys(Map<String, String> userKeys)     { this.userKeys = userKeys; }
 }

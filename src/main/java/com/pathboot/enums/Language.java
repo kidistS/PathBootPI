@@ -1,8 +1,11 @@
 package com.pathboot.enums;
 
+import lombok.Getter;
+
 /**
  * Represents the languages that the application can detect and process.
  */
+@Getter
 public enum Language {
 
     /** English language. */
@@ -27,12 +30,5 @@ public enum Language {
         this.isoCode = isoCode;
     }
 
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public String getIsoCode() {
-        return isoCode;
-    }
 }
 

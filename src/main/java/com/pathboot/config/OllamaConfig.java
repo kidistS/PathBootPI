@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Configuration for the Ollama / Mistral LLM integration via Spring AI.
  *
- * <p>Spring AI auto-configures {@code OllamaChatModel} from {@code application.yml}
+ * <p>Spring AI auto - configures {@code OllamaChatModel} from {@code application.yml}
  * properties. Here we expose a singleton {@link ChatClient} bean backed by that model.</p>
  */
 @Configuration
