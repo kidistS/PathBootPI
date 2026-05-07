@@ -139,7 +139,7 @@ or other NAV benefits such as dagpenger, AAP, or disability benefit.
 - Old-Age Pension: https://www.nav.no/alderspensjon/en
 - Job-Seeker Registration: https://www.nav.no/registrer-arbeidssoker/en
 - Financial support and services: https://www.nav.no/tjenester/en
-- Financial Social Assistance (Sosialhjelp): https://www.nav.no/sosialhjelp/en
+- Financial Social Assistance (Sosialhjelp): https://www.nav.no/okonomisk-sosialhjelp/en
 - Contact NAV: https://www.nav.no/kontaktoss/en
 
 ---
