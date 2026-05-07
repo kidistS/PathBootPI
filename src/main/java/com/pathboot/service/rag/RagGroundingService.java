@@ -19,6 +19,9 @@ import org.springframework.web.client.RestTemplate;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,14 +87,27 @@ public class RagGroundingService implements SmartInitializingSingleton {
             ensureEmbeddingModelAvailable();   // pull model if Ollama doesn't have it yet
 
             File storeFile = new File(storePath);
-            if (storeFile.exists()) {
-                // ── Fast path: load pre-computed embeddings from disk ──────────
-                logger.info("[RAG] Loading persisted vector store from: {}", storeFile.getAbsolutePath());
+            File hashFile  = new File(storePath + ".sha256");
+            String currentHash = computeGroundingHash();
+
+            boolean storeValid = storeFile.exists()
+                    && hashFile.exists()
+                    && !currentHash.isEmpty()
+                    && currentHash.equals(Files.readString(hashFile.toPath()).trim());
+
+            if (storeValid) {
+                // ── Fast path: grounding files unchanged – load pre-computed embeddings ──
+                logger.info("[RAG] Grounding files unchanged – loading persisted vector store from: {}",
+                        storeFile.getAbsolutePath());
                 vectorStore.load(storeFile);
                 logger.info("[RAG] Vector store restored from disk – no re-embedding needed");
             } else {
-                // ── Slow path: embed all grounding files and save to disk ──────
-                logger.info("[RAG] No persisted store found – embedding grounding files (first-run only)");
+                // ── Slow path: embed all grounding files and save to disk ──────────────
+                if (storeFile.exists()) {
+                    logger.info("[RAG] Grounding files have changed (or hash missing) – rebuilding vector store");
+                } else {
+                    logger.info("[RAG] No persisted store found – embedding grounding files (first-run only)");
+                }
                 loadDomainFile(PathBootConstants.TAX_GROUNDING_FILE,         DomainType.TAX.name());
                 loadDomainFile(PathBootConstants.NAV_GROUNDING_FILE,         DomainType.NAV.name());
                 loadDomainFile(PathBootConstants.IMMIGRATION_GROUNDING_FILE, DomainType.IMMIGRATION.name());
@@ -101,7 +117,9 @@ public class RagGroundingService implements SmartInitializingSingleton {
                     logger.warn("[RAG] Could not create directory for vector store: {}", parentDir.getAbsolutePath());
                 }
                 vectorStore.save(storeFile);
-                logger.info("[RAG] Vector store persisted to: {}", storeFile.getAbsolutePath());
+                Files.writeString(hashFile.toPath(), currentHash);
+                logger.info("[RAG] Vector store persisted to: {} (hash saved to {})",
+                        storeFile.getAbsolutePath(), hashFile.getAbsolutePath());
             }
             vectorStoreReady = true;
             logger.info("[RAG] Vector store ready – port will open now");
@@ -206,6 +224,34 @@ public class RagGroundingService implements SmartInitializingSingleton {
         logger.debug("[RAG] {} chunks retrieved for domain {} ({} chars)",
                 domainChunks.size(), domain, context.length());
         return context;
+    }
+
+    /**
+     * Computes a SHA-256 hex digest over the raw bytes of all grounding files.
+     * Any change to a grounding file produces a different hash, triggering a full re-index.
+     */
+    private String computeGroundingHash() {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            for (String path : List.of(
+                    PathBootConstants.TAX_GROUNDING_FILE,
+                    PathBootConstants.NAV_GROUNDING_FILE,
+                    PathBootConstants.IMMIGRATION_GROUNDING_FILE)) {
+                ClassPathResource res = new ClassPathResource(path);
+                try (var in = res.getInputStream()) {
+                    md.update(in.readAllBytes());
+                }
+            }
+            byte[] digest = md.digest();
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException | IOException ex) {
+            logger.warn("[RAG] Could not compute grounding hash: {} – will always re-embed", ex.getMessage());
+            return "";
+        }
     }
 
     private void loadDomainFile(String classpathPath, String domainName) throws IOException {

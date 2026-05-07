@@ -91,6 +91,35 @@ unemployment benefits, parental leave, sick pay, disability benefit, and pension
 
 ---
 
+## FINANCIAL SOCIAL ASSISTANCE (ØKONOMISK SOSIALHJELP)
+
+Financial social assistance (sosialhjelp / økonomisk sosialhjelp) is a last-resort benefit
+for people in acute financial need who cannot support themselves through work, other income,
+or other NAV benefits such as dagpenger, AAP, or disability benefit.
+
+### Who Can Get Financial Social Assistance
+- Anyone in Norway in acute financial need who has no other means of support.
+- It is means-tested: your income, savings, and assets are all assessed.
+- You must first have applied for any other NAV benefits you may be entitled to.
+
+### What It Covers
+- Basic living expenses: food, housing, electricity, clothing, and other necessities.
+- The amount is individually assessed based on your actual financial situation.
+
+### How to Apply for Financial Social Assistance
+1. Log in to nav.no with BankID or MinID.
+2. Navigate to "Søk om økonomisk sosialhjelp" (Apply for financial social assistance).
+3. Alternatively, visit your local NAV office in person – every municipality has one.
+4. Bring or upload documentation: bank statements, income details, rent/bills.
+5. A caseworker will review your application and may invite you to a meeting.
+6. Normal processing time is 2–4 weeks; emergency (akutt) assistance can be faster.
+
+### Where to Get Financial Social Assistance
+- Apply online: https://www.nav.no/sosialhjelp/en
+- Find your local NAV office: https://www.nav.no/kontaktoss/en
+
+---
+
 ## HOW TO CONTACT / USE NAV
 
 - Website: nav.no
@@ -110,6 +139,7 @@ unemployment benefits, parental leave, sick pay, disability benefit, and pension
 - Old-Age Pension: https://www.nav.no/alderspensjon/en
 - Job-Seeker Registration: https://www.nav.no/registrer-arbeidssoker/en
 - Financial support and services: https://www.nav.no/tjenester/en
+- Financial Social Assistance (Sosialhjelp): https://www.nav.no/sosialhjelp/en
 - Contact NAV: https://www.nav.no/kontaktoss/en
 
 ---
@@ -133,3 +163,18 @@ Q: What is meldekort?
 A: Every two weeks you must submit a meldekort (activity/status report) confirming you are
    actively seeking work and available for employment. Failure to submit on time can suspend
    your payments.
+
+Q: Can I work part-time while receiving benefits?
+A: Yes, but you must report any income from part-time work to NAV. Your benefits may be reduced
+ based on your earnings, and you must continue to meet the eligibility criteria for the benefits
+ you are receiving. Always check with NAV before starting part-time work to understand how it may
+ affect your benefits.
+
+Q: How can I apply for financial social assistance?
+A: You can apply for financial social assistance (sosialhjelp) online at nav.no by logging in with
+   BankID or MinID and searching for "søk om økonomisk sosialhjelp". Alternatively, you can
+   visit your local NAV office in person to apply. You will need to provide documentation of your
+   financial situation, including income, expenses, and bank statements. The caseworker will
+   review your application and may invite you for a meeting to discuss your needs. Processing time
+   is typically 2–4 weeks, but emergency assistance may be available more quickly. More information:
+   https://www.nav.no/sosialhjelp/en

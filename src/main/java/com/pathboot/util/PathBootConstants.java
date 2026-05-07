@@ -61,12 +61,12 @@ public final class PathBootConstants {
 
     public static final String[] NAV_KEYWORDS = {
         // English
-        "nav", "unemployment", "sick leave", "disability", "benefit", "welfare",
-        "allowance", "child benefit", "parental leave", "social security", "work assessment",
+        "nav", "unemployment", "sick leave", "disability", "benefit", "welfare", "Financial assistance",
+        "allowance", "child benefit", "parental leave", "social security", "work assessment", "financial social assistance",
         // Norwegian
-        "dagpenger", "sykepenger", "sykmelding", "sykmeldt", "uføre", "arbeidsavklaringspenger",
+        "dagpenger", "sykepenger", "sykmelding", "sykmeldt", "uføre", "sosialhjelp", "arbeidsavklaringspenger",
         "barnebidrag", "foreldrepenger", "kontantstøtte", "trygd", "sosialhjelp",
-        "arbeidsledig", "tilleggsstønad"
+        "arbeidsledig", "tilleggsstønad","Økonomisk sosialhjelp"
     };
 
     public static final String[] IMMIGRATION_KEYWORDS = {
