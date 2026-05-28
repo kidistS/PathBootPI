@@ -6,12 +6,26 @@ import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/**
+ * Configures asynchronous execution and scheduled task support.
+ *
+ * <ul>
+ *   <li>{@link EnableScheduling} activates the {@code @Scheduled} annotation, which is
+ *       used by {@link com.pathboot.session.UserSessionManager#evictStaleSessions()} to
+ *       prevent unbounded growth of the in-memory session map.</li>
+ *   <li>The custom {@link ThreadPoolTaskExecutor} is used for all {@code @Async} fire-and-forget
+ *       persistence calls. Pool size is deliberately small (core=2, max=4) because the workload
+ *       is I/O-bound SQLite writes that must not starve the main request threads.</li>
+ * </ul>
+ */
 @Configuration
+@EnableScheduling
 public class AsyncConfig implements AsyncConfigurer {
 
     private static final Logger logger = LogManager.getLogger(AsyncConfig.class);

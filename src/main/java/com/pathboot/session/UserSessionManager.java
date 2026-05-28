@@ -10,8 +10,10 @@ import com.pathboot.service.AsyncPersistenceService;
 import com.pathboot.util.PathBootConstants;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,10 +29,19 @@ import java.util.concurrent.ConcurrentHashMap;
  *       across restarts and for sessions evicted from memory.</li>
  * </ol>
  *
- * <p>On {@link #getOrCreateSession}: memory → DB → create new.</p>
+ * <p>On {@link #getOrCreateSession}: memory → DB → create new.
+ * Every successful memory-tier hit also calls {@link UserSessionData#touch()} to keep
+ * {@code lastAccessedTime} current for the eviction scheduler.</p>
+ *
  * <p>On {@link #recordSessionTurn}: update memory immediately, persist to DB asynchronously
  * via {@link AsyncPersistenceService} (separate bean ensures Spring's {@code @Async} proxy
  * is honoured).</p>
+ *
+ * <h3>Eviction</h3>
+ * <p>{@link #evictStaleSessions()} runs every hour and removes sessions whose
+ * {@code lastAccessedTime} is older than {@link PathBootConstants#SESSION_INACTIVITY_TTL_HOURS}.
+ * This prevents the in-memory map from growing unboundedly when users disconnect without
+ * explicitly ending the conversation.</p>
  */
 @Component
 public class UserSessionManager {
@@ -63,7 +74,9 @@ public class UserSessionManager {
         String resolvedId = resolveSessionId(sessionId);
         // 1. Check hot tier
         if (activeSessions.containsKey(resolvedId)) {
-            return activeSessions.get(resolvedId);
+            UserSessionData existing = activeSessions.get(resolvedId);
+            existing.touch(); // refresh last-access time so the eviction scheduler doesn't remove active sessions
+            return existing;
         }
         // 2. Check cold tier (DB) – reconnecting returning user after restart
         Optional<UserSessionEntity> stored = userSessionRepository.findBySessionId(resolvedId);
@@ -114,6 +127,34 @@ public class UserSessionManager {
         userSessionRepository.findBySessionId(sessionId)
                 .ifPresent(userSessionRepository::delete);
         logger.info("Session cleared: {}", sessionId);
+    }
+
+    // ─── Scheduled eviction ──────────────────────────────────────────────────
+
+    /**
+     * Evicts sessions that have been idle for longer than
+     * {@link PathBootConstants#SESSION_INACTIVITY_TTL_HOURS} hours.
+     *
+     * <p>Runs every hour (fixedRate = 3600 s). In-memory only — the DB copy is retained
+     * for audit purposes and can be reloaded if the user reconnects.
+     * Prevents the {@code activeSessions} map from growing unboundedly when users
+     * disconnect without saying goodbye.</p>
+     */
+    @Scheduled(fixedRateString = "PT1H") // ISO-8601 duration: run every 1 hour
+    public void evictStaleSessions() {
+        LocalDateTime cutoff = LocalDateTime.now()
+                .minusHours(PathBootConstants.SESSION_INACTIVITY_TTL_HOURS);
+        int before = activeSessions.size();
+        activeSessions.entrySet().removeIf(entry ->
+                entry.getValue().getLastAccessedTime().isBefore(cutoff));
+        int evicted = before - activeSessions.size();
+        if (evicted > 0) {
+            logger.info("Session eviction sweep: removed {} stale session(s) (idle > {}h)",
+                    evicted, PathBootConstants.SESSION_INACTIVITY_TTL_HOURS);
+        } else {
+            logger.debug("Session eviction sweep: no stale sessions found ({} active)",
+                    activeSessions.size());
+        }
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────

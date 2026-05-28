@@ -83,11 +83,14 @@ public class SecurityConfig {
     /**
      * CORS — mirrors the settings in {@link WebConfig} so Spring Security
      * does not block pre-flight OPTIONS requests before they reach the MVC layer.
+     *
+     * <p><b>PRODUCTION HARDENING:</b> Replace {@code allowedOriginPatterns("*")} with
+     * the specific origins of your frontend application.</p>
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(List.of("*")); // ⚠ Restrict in production
         config.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setMaxAge(3600L);

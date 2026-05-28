@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +28,12 @@ import java.util.Set;
  * <p>Public paths (Swagger UI, OpenAPI docs, webjars, auth login, actuator)
  * are automatically skipped via {@link #shouldNotFilter} — those paths never
  * reach the key-check logic regardless of what the caller sends.</p>
+ *
+ * <h3>Timing-safe key validation</h3>
+ * <p>API key comparison uses {@link MessageDigest#isEqual} for every candidate key,
+ * without short-circuiting on the first match. This prevents a timing side-channel
+ * that would otherwise allow an attacker to determine whether a guessed key matches
+ * any entry in the valid-key set by measuring response latency.</p>
  */
 public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
@@ -62,7 +70,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
         String apiKey = request.getHeader(PathBootConstants.API_KEY_HEADER);
 
-        if (apiKey == null || !validApiKeys.contains(apiKey)) {
+        if (!isValidApiKey(apiKey)) {
             logger.warn("Unauthorized request – missing or invalid '{}' header from {}",
                     PathBootConstants.API_KEY_HEADER, request.getRemoteAddr());
 
@@ -82,5 +90,30 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         filterChain.doFilter(request, response);
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * Constant-time API key validation.
+     *
+     * <p>Iterates ALL valid keys without short-circuiting on the first match so that
+     * the response time does not reveal how many keys were tested before a match
+     * (preventing a timing oracle).</p>
+     *
+     * @param providedKey the key extracted from the request header (may be null)
+     * @return {@code true} if the key matches any entry in {@code validApiKeys}
+     */
+    private boolean isValidApiKey(String providedKey) {
+        if (providedKey == null) return false;
+        byte[] provided = providedKey.getBytes(StandardCharsets.UTF_8);
+        boolean match = false;
+        for (String validKey : validApiKeys) {
+            // Do NOT return early — always check all keys to keep timing uniform.
+            if (MessageDigest.isEqual(validKey.getBytes(StandardCharsets.UTF_8), provided)) {
+                match = true;
+            }
+        }
+        return match;
     }
 }

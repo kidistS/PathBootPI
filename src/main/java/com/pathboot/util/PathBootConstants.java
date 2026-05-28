@@ -177,6 +177,13 @@ public final class PathBootConstants {
     // ─── Session ─────────────────────────────────────────────────────────────
     public static final int MAX_SESSION_HISTORY_SIZE = 20;
 
+    /**
+     * Sessions in the in-memory hot tier that have not been accessed for this many hours
+     * are evicted by {@link com.pathboot.session.UserSessionManager#evictStaleSessions()}.
+     * The DB copy is retained for audit/restore purposes.
+     */
+    public static final long SESSION_INACTIVITY_TTL_HOURS = 24L;
+
     // ─── Swagger ─────────────────────────────────────────────────────────────
     public static final String SWAGGER_API_TITLE       = "PathBoot PI – Multilingual Domain Q&A API";
     public static final String SWAGGER_API_DESCRIPTION =
