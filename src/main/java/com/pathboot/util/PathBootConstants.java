@@ -61,12 +61,13 @@ public final class PathBootConstants {
 
     public static final String[] NAV_KEYWORDS = {
         // English
-        "nav", "unemployment", "sick leave", "disability", "benefit", "welfare", "Financial assistance",
-        "allowance", "child benefit", "parental leave", "social security", "work assessment", "financial social assistance",
+        "nav", "unemployment", "sick leave", "disability", "benefit", "welfare",
+        "financial assistance", "allowance", "child benefit", "parental leave",
+        "social security", "work assessment", "financial social assistance",
         // Norwegian
-        "dagpenger", "sykepenger", "sykmelding", "sykmeldt", "uføre", "sosialhjelp", "arbeidsavklaringspenger",
-        "barnebidrag", "foreldrepenger", "kontantstøtte", "trygd", "sosialhjelp",
-        "arbeidsledig", "tilleggsstønad","Økonomisk sosialhjelp"
+        "dagpenger", "sykepenger", "sykmelding", "sykmeldt", "uføre", "sosialhjelp",
+        "arbeidsavklaringspenger", "barnebidrag", "foreldrepenger", "kontantstøtte",
+        "trygd", "arbeidsledig", "tilleggsstønad", "økonomisk sosialhjelp"
     };
 
     public static final String[] IMMIGRATION_KEYWORDS = {
@@ -78,6 +79,57 @@ public final class PathBootConstants {
         "innvandring", "oppholdstillatelse", "arbeidstillatelse", "asyl", "flyktning",
         "statsborgerskap", "grense", "familiegjenforening", "d-nummer", "utlendingsdirektorat"
     };
+
+    // ─── Farewell / goodbye keyword detection ───────────────────────────────
+
+    /**
+     * English farewell phrases – matched against the <em>English</em> version of the
+     * user's message (i.e. after Amharic→English translation, or the raw input for
+     * English/Norwegian users).
+     *
+     * <p>All entries must be lower-cased; the check lowercases the input before comparison.</p>
+     *
+     * @see com.pathboot.service.ChatFacadeService#isFarewell(String)
+     */
+    public static final String[] FAREWELL_KEYWORDS = {
+        "bye", "goodbye", "good bye", "good-bye", "see you", "see ya",
+        "thank you", "thanks", "that's all", "that is all", "no more questions",
+        "no more help", "i'm done", "im done", "i am done", "done", "quit",
+        "exit", "farewell", "take care", "have a good day", "have a nice day",
+        "ttyl", "talk later", "chat later", "end", "finish", "close"
+    };
+
+    /**
+     * Norwegian farewell phrases – matched against the <em>original</em> user input
+     * (before any language detection or translation) so that short phrases like
+     * {@code "takk"} or {@code "ha det"} are never misclassified as English by the
+     * language detector.
+     *
+     * <p>All entries must be lower-cased.</p>
+     *
+     * @see com.pathboot.service.ChatFacadeService#isNorwegianFarewell(String)
+     */
+    public static final String[] FAREWELL_KEYWORDS_NORWEGIAN = {
+        "ha det", "ha det bra", "takk", "tusen takk", "mange takk", "farvel",
+        "adjø", "på gjensyn", "det var alt", "jeg er ferdig", "vi snakkes",
+        "god dag", "god natt", "ha en fin dag", "ses"
+    };
+
+    // ─── Farewell goodbye messages (one per supported language) ──────────────
+    public static final String FAREWELL_MESSAGE_ENGLISH =
+            "Thank you for reaching out! 😊 It was my pleasure to assist you. "
+            + "If you ever have more questions about Norwegian Tax, NAV, or Immigration, "
+            + "don't hesitate to come back. Have a wonderful day! 👋";
+
+    public static final String FAREWELL_MESSAGE_NORWEGIAN =
+            "Takk for at du tok kontakt! 😊 Det var en glede å hjelpe deg. "
+            + "Hvis du noen gang har flere spørsmål om norsk skatt, NAV eller innvandring, "
+            + "er du alltid velkommen tilbake. Ha en fin dag! 👋";
+
+    public static final String FAREWELL_MESSAGE_AMHARIC =
+            "ስለተወያዩን እናመሰግናለን! 😊 እርስዎን መርዳት በጣም አስደሳች ነበር። "
+            + "ስለ ኖርዌይ ግብር፣ NAV ወይም ስደት ተጨማሪ ጥያቄዎች ካሉዎት፣ "
+            + "እንደገና ለመምጣት ነፃነት ይሰማዎ። መልካም ቀን ይሁንልዎ! 👋";
 
     // ─── UNKNOWN domain clarification messages (one per supported language) ──
     /**

@@ -68,6 +68,37 @@ public class ChatFacadeService {
             questionForProcessing = chatRequest.getUserInput();
             translatedToEnglish   = chatRequest.getUserInput();
         }
+
+        // ── FAREWELL detection: short-circuit before domain classification ──────
+        if (isFarewell(questionForProcessing) || isNorwegianFarewell(chatRequest.getUserInput())) {
+            logger.info("[Session {}] Farewell detected – ending conversation politely", resolvedSessionId);
+
+            final String goodbyeMessage;
+            if (detectedLanguage == Language.AMHARIC) {
+                goodbyeMessage = PathBootConstants.FAREWELL_MESSAGE_AMHARIC;
+            } else if (detectedLanguage == Language.NORWEGIAN
+                    || isNorwegianFarewell(chatRequest.getUserInput())) {
+                // Use Norwegian message even if the language detector misclassified the
+                // short farewell phrase (e.g. "takk", "ha det") as English.
+                goodbyeMessage = PathBootConstants.FAREWELL_MESSAGE_NORWEGIAN;
+            } else {
+                goodbyeMessage = PathBootConstants.FAREWELL_MESSAGE_ENGLISH;
+            }
+
+            userSessionManager.recordSessionTurn(resolvedSessionId, chatRequest.getUserInput(),
+                    goodbyeMessage, detectedLanguage, DomainType.UNKNOWN);
+            userSessionManager.clearSession(resolvedSessionId);
+
+            return ChatResponse.builder()
+                    .responseText(goodbyeMessage)
+                    .detectedLanguage(detectedLanguage.name())
+                    .detectedDomain("FAREWELL")
+                    .sessionId(resolvedSessionId)
+                    .timestamp(LocalDateTime.now())
+                    .conversationEnded(true)
+                    .build();
+        }
+
         DomainType detectedDomain = domainClassificationService.classifyDomain(questionForProcessing);
         logger.info("[Session {}] Detected domain: {}", resolvedSessionId, detectedDomain);
 
@@ -136,5 +167,38 @@ public class ChatFacadeService {
                 .sessionId(resolvedSessionId)
                 .timestamp(LocalDateTime.now())
                 .build();
+    }
+
+    /**
+     * Returns {@code true} if the (English) question contains a farewell keyword,
+     * meaning the user wants to end the conversation.
+     */
+    private boolean isFarewell(String englishText) {
+        if (englishText == null || englishText.isBlank()) return false;
+        String lower = englishText.toLowerCase().trim();
+        for (String keyword : PathBootConstants.FAREWELL_KEYWORDS) {
+            if (lower.equals(keyword) || lower.startsWith(keyword + " ")
+                    || lower.endsWith(" " + keyword) || lower.contains(" " + keyword + " ")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns {@code true} if the ORIGINAL user input (before any translation) matches
+     * a Norwegian farewell phrase.  This bypasses the language detector, which often
+     * misclassifies short Norwegian phrases (e.g. "takk", "ha det") as English.
+     */
+    private boolean isNorwegianFarewell(String originalInput) {
+        if (originalInput == null || originalInput.isBlank()) return false;
+        String lower = originalInput.toLowerCase().trim();
+        for (String keyword : PathBootConstants.FAREWELL_KEYWORDS_NORWEGIAN) {
+            if (lower.equals(keyword) || lower.startsWith(keyword + " ")
+                    || lower.endsWith(" " + keyword) || lower.contains(" " + keyword + " ")) {
+                return true;
+            }
+        }
+        return false;
     }
 }

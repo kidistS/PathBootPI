@@ -38,5 +38,9 @@ public class ChatResponse {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Schema(description = "Timestamp of the response")
     private LocalDateTime timestamp;
+
+    @Schema(description = "True when the user said goodbye and the session has been ended",
+            example = "false")
+    private boolean conversationEnded;
 }
 

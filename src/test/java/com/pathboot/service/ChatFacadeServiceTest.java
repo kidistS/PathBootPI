@@ -11,10 +11,14 @@ import com.pathboot.service.translation.TranslationOrchestrationService;
 import com.pathboot.session.UserSessionData;
 import com.pathboot.session.UserSessionManager;
 import com.pathboot.util.LanguageDetectionUtil;
+import com.pathboot.util.PathBootConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -289,5 +293,187 @@ class ChatFacadeServiceTest {
         ChatResponse response = chatFacadeService.processUserChatRequest(request);
 
         assertThat(response.getTimestamp()).isNotNull();
+    }
+
+    // ── Farewell detection ────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("Farewell detection – conversation ending")
+    class FarewellDetection {
+
+        // ── Short-circuit: no domain classifier, no agent, no persistence ─────
+
+        @Test
+        @DisplayName("farewell input – domain classifier is NEVER called")
+        void farewell_shouldNotCallDomainClassifier() {
+            when(languageDetectionUtil.detectLanguage("bye")).thenReturn(Language.ENGLISH);
+
+            chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput("bye").sessionId(SESSION_ID).build());
+
+            verify(domainClassificationService, never()).classifyDomain(anyString());
+        }
+
+        @Test
+        @DisplayName("farewell input – agent factory is NEVER called")
+        void farewell_shouldNotCallAgentFactory() {
+            when(languageDetectionUtil.detectLanguage("goodbye")).thenReturn(Language.ENGLISH);
+
+            chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput("goodbye").sessionId(SESSION_ID).build());
+
+            verify(agentFactory, never()).getAgentForDomain(any());
+        }
+
+        @Test
+        @DisplayName("farewell input – async persistence is NEVER called")
+        void farewell_shouldNotPersistInteraction() {
+            when(languageDetectionUtil.detectLanguage("thank you")).thenReturn(Language.ENGLISH);
+
+            chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput("thank you").sessionId(SESSION_ID).build());
+
+            verify(asyncPersistenceService, never()).persistInteractionAsync(any());
+        }
+
+        // ── conversationEnded flag ────────────────────────────────────────────
+
+        @Test
+        @DisplayName("farewell input – response has conversationEnded=true")
+        void farewell_shouldSetConversationEndedTrue() {
+            when(languageDetectionUtil.detectLanguage("bye")).thenReturn(Language.ENGLISH);
+
+            ChatResponse response = chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput("bye").sessionId(SESSION_ID).build());
+
+            assertThat(response.isConversationEnded()).isTrue();
+        }
+
+        @Test
+        @DisplayName("farewell input – detectedDomain is 'FAREWELL'")
+        void farewell_shouldSetDomainToFarewell() {
+            when(languageDetectionUtil.detectLanguage("goodbye")).thenReturn(Language.ENGLISH);
+
+            ChatResponse response = chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput("goodbye").sessionId(SESSION_ID).build());
+
+            assertThat(response.getDetectedDomain()).isEqualTo("FAREWELL");
+        }
+
+        // ── Session is cleared ────────────────────────────────────────────────
+
+        @Test
+        @DisplayName("farewell input – session is cleared after responding")
+        void farewell_shouldClearSession() {
+            when(languageDetectionUtil.detectLanguage("done")).thenReturn(Language.ENGLISH);
+
+            chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput("done").sessionId(SESSION_ID).build());
+
+            verify(userSessionManager, times(1)).clearSession(SESSION_ID);
+        }
+
+        // ── English farewell messages ─────────────────────────────────────────
+
+        @ParameterizedTest(name = "[{index}] English farewell: \"{0}\"")
+        @ValueSource(strings = {"bye", "goodbye", "thank you", "thanks", "that's all",
+                                "farewell", "take care", "have a good day", "done"})
+        @DisplayName("English farewell keywords → English farewell message")
+        void englishFarewellKeywords_shouldReturnEnglishMessage(String input) {
+            when(languageDetectionUtil.detectLanguage(input)).thenReturn(Language.ENGLISH);
+
+            ChatResponse response = chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput(input).sessionId(SESSION_ID).build());
+
+            assertThat(response.getResponseText()).isEqualTo(PathBootConstants.FAREWELL_MESSAGE_ENGLISH);
+            assertThat(response.getDetectedLanguage()).isEqualTo(Language.ENGLISH.name());
+        }
+
+        // ── Norwegian farewell messages ───────────────────────────────────────
+
+        @ParameterizedTest(name = "[{index}] Norwegian farewell (good detection): \"{0}\"")
+        @ValueSource(strings = {"ha det bra", "farvel", "på gjensyn", "vi snakkes"})
+        @DisplayName("Norwegian farewell (language detector correct) → Norwegian farewell message")
+        void norwegianFarewellWithCorrectDetection_shouldReturnNorwegianMessage(String input) {
+            // These phrases are long enough for the detector to identify them correctly
+            when(languageDetectionUtil.detectLanguage(input)).thenReturn(Language.NORWEGIAN);
+
+            ChatResponse response = chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput(input).sessionId(SESSION_ID).build());
+
+            assertThat(response.getResponseText()).isEqualTo(PathBootConstants.FAREWELL_MESSAGE_NORWEGIAN);
+            assertThat(response.isConversationEnded()).isTrue();
+        }
+
+        @ParameterizedTest(name = "[{index}] Norwegian farewell (misdetected as English): \"{0}\"")
+        @ValueSource(strings = {"takk", "ha det", "ses", "farvel"})
+        @DisplayName("Short Norwegian farewell misdetected as ENGLISH → still returns Norwegian message")
+        void norwegianFarewellMisdetectedAsEnglish_shouldStillReturnNorwegianMessage(String input) {
+            // Simulate the language detector misclassifying short Norwegian as English
+            when(languageDetectionUtil.detectLanguage(input)).thenReturn(Language.ENGLISH);
+
+            ChatResponse response = chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput(input).sessionId(SESSION_ID).build());
+
+            // isNorwegianFarewell() must override the language detector result
+            assertThat(response.getResponseText()).isEqualTo(PathBootConstants.FAREWELL_MESSAGE_NORWEGIAN);
+            assertThat(response.isConversationEnded()).isTrue();
+        }
+
+        // ── Amharic farewell ──────────────────────────────────────────────────
+
+        @Test
+        @DisplayName("Amharic farewell translated to English → Amharic farewell message returned")
+        void amharicFarewellTranslatedToEnglish_shouldReturnAmharicMessage() {
+            String amharicFarewell = "ደህና ሁን"; // "goodbye" in Amharic
+            String englishTranslation = "goodbye";
+
+            when(languageDetectionUtil.detectLanguage(amharicFarewell)).thenReturn(Language.AMHARIC);
+            when(translationOrchestrationService.translateToEnglish(amharicFarewell, Language.AMHARIC))
+                    .thenReturn(englishTranslation);
+
+            ChatResponse response = chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput(amharicFarewell).sessionId(SESSION_ID).build());
+
+            assertThat(response.getResponseText()).isEqualTo(PathBootConstants.FAREWELL_MESSAGE_AMHARIC);
+            assertThat(response.getDetectedLanguage()).isEqualTo(Language.AMHARIC.name());
+            assertThat(response.isConversationEnded()).isTrue();
+            // No back-translation is called for farewell
+            verify(translationOrchestrationService, never())
+                    .translateFromEnglish(anyString(), any(Language.class));
+        }
+
+        // ── Non-farewell inputs must NOT trigger farewell path ────────────────
+
+        @ParameterizedTest(name = "[{index}] Non-farewell: \"{0}\"")
+        @ValueSource(strings = {
+            "What is tax?",
+            "How do I apply for NAV benefits?",
+            "I need help with my visa"
+        })
+        @DisplayName("Normal questions must NOT be detected as farewell")
+        void normalQuestions_shouldNotTriggerFarewell(String input) {
+            when(languageDetectionUtil.detectLanguage(input)).thenReturn(Language.ENGLISH);
+            when(domainClassificationService.classifyDomain(input)).thenReturn(DomainType.TAX);
+            when(agentFactory.getAgentForDomain(DomainType.TAX)).thenReturn(domainAgent);
+            when(domainAgent.processUserQuestion(anyString(), anyString(), any())).thenReturn("Answer");
+
+            ChatResponse response = chatFacadeService.processUserChatRequest(
+                    ChatRequest.builder().userInput(input).sessionId(SESSION_ID).build());
+
+            assertThat(response.isConversationEnded()).isFalse();
+            assertThat(response.getDetectedDomain()).isNotEqualTo("FAREWELL");
+            // Domain classification MUST still be called
+            verify(domainClassificationService, times(1)).classifyDomain(anyString());
+        }
+
+        @Test
+        @DisplayName("normal response always has conversationEnded=false")
+        void normalResponse_shouldHaveConversationEndedFalse() {
+            ChatRequest request = ChatRequest.builder().userInput(USER_INPUT).sessionId(SESSION_ID).build();
+            ChatResponse response = chatFacadeService.processUserChatRequest(request);
+
+            assertThat(response.isConversationEnded()).isFalse();
+        }
     }
 }
