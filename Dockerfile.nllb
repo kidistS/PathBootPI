@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PathBoot – NLLB Translation Server Dockerfile
+# Wraps nllb_server.py (Facebook NLLB-200-distilled-600M for Amharic translation)
+# ─────────────────────────────────────────────────────────────────────────────
+FROM python:3.11-slim
+WORKDIR /app
+
+# Install dependencies first (layer cached unless requirements change)
+RUN pip install --no-cache-dir \
+    flask \
+    transformers \
+    torch \
+    sentencepiece \
+    protobuf
+
+COPY nllb_server.py .
+
+EXPOSE 5000
+
+CMD ["python", "-u", "nllb_server.py"]
+
