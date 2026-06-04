@@ -1,7 +1,7 @@
 # PathBoot PI – Technology Choices & Rationale
 
 > **Audience:** developers joining or maintaining the project.  
-> **Last updated:** 2026-04-29
+> **Last updated:** 2026-05-29
 
 This document explains **every technology, library, and framework** used in PathBoot PI,
 and—critically—**why** each was chosen over the alternatives.
@@ -31,6 +31,18 @@ and—critically—**why** each was chosen over the alternatives.
 19. [Testing – JUnit 5 + Mockito + H2](#19-testing--junit-5--mockito--h2)
 20. [Build – Maven (Maven Wrapper)](#20-build--maven-maven-wrapper)
 21. [Design Patterns Summary](#21-design-patterns-summary)
+
+---
+
+## Execution Modes Context
+
+The technology choices in this document support three run modes:
+
+1. Manual local startup (`ollama` + `nllb` + backend + frontend)
+2. Automated local startup (`start-all.ps1` / `stop-all.ps1` at workspace root)
+3. Docker Compose startup (`docker-compose.yml` at workspace root)
+
+For run commands and service startup order, use `README.md` as the source of truth.
 
 ---
 

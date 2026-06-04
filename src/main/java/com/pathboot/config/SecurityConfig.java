@@ -1,6 +1,8 @@
 package com.pathboot.config;
 
 import com.pathboot.security.ApiKeyAuthFilter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,6 +30,8 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private static final Logger logger = LogManager.getLogger(SecurityConfig.class);
 
     private final ApiSecurityProperties securityProperties;
 
@@ -90,7 +94,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*")); // ⚠ Restrict in production
+        config.setAllowedOriginPatterns(getAllowedOriginPatterns());
         config.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setMaxAge(3600L);
@@ -98,5 +102,21 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private List<String> getAllowedOriginPatterns() {
+        String profile = System.getenv("SPRING_PROFILES_ACTIVE");
+        if (profile != null && profile.equalsIgnoreCase("prod")) {
+            String frontendUrl = System.getenv("FRONTEND_URL");
+            if (frontendUrl == null || frontendUrl.isBlank()) {
+                throw new IllegalStateException("FRONTEND_URL must be set when SPRING_PROFILES_ACTIVE=prod");
+            }
+            logger.info("Production CORS restricted to frontend origin: {}", frontendUrl);
+            return List.of(frontendUrl);
+        }
+        if (profile != null && profile.equalsIgnoreCase("test")) {
+            return List.of("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173");
+        }
+        return List.of("*");
     }
 }

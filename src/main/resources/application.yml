@@ -1,40 +1,17 @@
 spring:
   application:
     name: pathboot-pi
-  profiles:
-    active: local
-  # ─── SQLite Persistent Database ─────────────────────────────────────────────
-  datasource:
-    url: jdbc:sqlite:./data/pathboot-data.db
-    driver-class-name: org.sqlite.JDBC
-    hikari:
-      # SQLite supports only one writer at a time. A pool of 1 serialises all writes
-      # through HikariCP's own queue, eliminating SQLITE_BUSY "database is locked" errors.
-      maximum-pool-size: 1
-      minimum-idle: 1
-      # WAL mode allows concurrent readers while one writer is active.
-      # busy_timeout=30000 makes SQLite wait up to 30 s for the write lock instead of
-      # failing immediately with SQLITE_BUSY.
-      connection-init-sql: "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000; PRAGMA synchronous=NORMAL;"
-  jpa:
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
-    hibernate:
-      ddl-auto: update            # creates tables on first run, preserves data on restart
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-        # SQLite does not support sequence-based generation; IDENTITY uses rowid autoincrement
-        jakarta.persistence.schema-generation.database.action: none
-  # ─── Cache (Caffeine in-memory) ──────────────────────────────────────────────
-  # Caffeine spec is configured programmatically in CacheConfig.java (the bean wins).
-  # The spec key below is intentionally removed to avoid misleading duplicate config.
+  # ─── Profile-Specific Database and JPA Settings ────────────────────────────
+  # Datasource, JPA, and cache settings are defined in profile-specific files:
+  # - application-local.yml  (SQLite)
+  # - application-test.yml   (PostgreSQL + H2 in tests)
+  # - application-prod.yml   (PostgreSQL)
   cache:
     type: caffeine
   # ─── Spring AI – Ollama / Mistral ───────────────────────────────────────────
   ai:
     ollama:
-      base-url: http://localhost:11434
+      base-url: ${SPRING_AI_OLLAMA_BASE_URL:http://localhost:11434}
       chat:
         options:
           model: mistral
@@ -51,7 +28,7 @@ spring:
 # ─── NLLB Translation Server (local Python) ────────────────────────────────
 nllb:
   server:
-    base-url: http://localhost:5000
+    base-url: ${NLLB_SERVER_BASE_URL:http://localhost:5000}
     translate-endpoint: /translate
     connect-timeout-ms: 5000
     read-timeout-ms: 120000   # 2 min – NLLB-600M on CPU can take 30-90 s on first call
@@ -112,3 +89,4 @@ management:
 # ─── Logging (Log4j2 – see log4j2.xml for full config) ────────────────────
 logging:
   config: classpath:log4j2.xml
+

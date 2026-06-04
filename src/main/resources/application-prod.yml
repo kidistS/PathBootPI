@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PathBoot PI – Spring Profile: PROD
+#
+# Production environment profile using PostgreSQL, strict security, and no dev features.
+# ALL secrets MUST be set via environment variables – never commit real values.
+#
+# Usage:
+#   SPRING_PROFILES_ACTIVE=prod docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+#
+# Required environment variables (must be set before startup):
+#   SPRING_DATASOURCE_URL
+#   SPRING_DATASOURCE_USERNAME
+#   SPRING_DATASOURCE_PASSWORD
+#   PATHBOOT_API_KEY_1
+#   PATHBOOT_API_KEY_2
+#   PATHBOOT_ADMIN_PASSWORD
+#   PATHBOOT_USER_PASSWORD
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  # ─── PostgreSQL Database for Production ────────────────────────────────────
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      auto-commit: true
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate             # production: never auto-migrate, validate only
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false            # production: no SQL formatting overhead
+        jdbc.batch_size: 50
+        order_inserts: true
+        order_updates: true
+        jdbc.fetch_size: 100
+        generate_statistics: false
+
+# ─── RAG Vector Store – production persistent storage ────────────────────────
+rag:
+  store-path: /data/pathboot-vector-store.json  # persistent across restarts
+
+# ─── Security: API key enforcement is mandatory in production ─────────────────
+api:
+  security:
+    enabled: true
+
+# ─── Swagger disabled in production ─────────────────────────────────────────────
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+# ─── Actuator: restricted to authenticated users only ────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info         # minimal exposure in production
+  endpoint:
+    health:
+      show-details: when-authorized  # hide details from unauthenticated requests
+
+# ─── Logging: minimal for production (structured logging recommended) ────────────
+logging:
+  level:
+    root: WARN
+    com.pathboot: INFO
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+

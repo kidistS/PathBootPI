@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PathBoot PI – Spring Profile: LOCAL
+#
+# Local development profile using SQLite, localhost service URLs, and dev credentials.
+# This profile is selected by default when SPRING_PROFILES_ACTIVE is not set.
+#
+# Usage:
+#   spring.profiles.active=local (default via SPRING_PROFILES_ACTIVE env)
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  # ─── SQLite Persistent Database ─────────────────────────────────────────────
+  datasource:
+    url: jdbc:sqlite:./data/pathboot-data.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      # SQLite supports only one writer at a time. A pool of 1 serialises all writes
+      # through HikariCP's own queue, eliminating SQLITE_BUSY "database is locked" errors.
+      maximum-pool-size: 1
+      minimum-idle: 1
+      # WAL mode allows concurrent readers while one writer is active.
+      # busy_timeout=30000 makes SQLite wait up to 30 s for the write lock instead of
+      # failing immediately with SQLITE_BUSY.
+      connection-init-sql: "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000; PRAGMA synchronous=NORMAL;"
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update            # creates tables on first run, preserves data on restart
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        # SQLite does not support sequence-based generation; IDENTITY uses rowid autoincrement
+        jakarta.persistence.schema-generation.database.action: none
+
+# ─── Security: API key enforcement is enabled even in local development ────────
+api:
+  security:
+    enabled: true
+
+# ─── Logging: verbose for local development ────────────────────────────────────
+logging:
+  level:
+    root: INFO
+    com.pathboot: DEBUG
+

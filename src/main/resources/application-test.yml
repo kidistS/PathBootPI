@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PathBoot PI – Spring Profile: TEST
+#
+# Test environment profile using PostgreSQL, test credentials, and stricter settings.
+# Used in integration tests and containerized test environments.
+#
+# Usage:
+#   SPRING_PROFILES_ACTIVE=test docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  # ─── PostgreSQL Database for Test ───────────────────────────────────────────
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pathboot_test}
+    username: ${SPRING_DATASOURCE_USERNAME:pathboot_test}
+    password: ${SPRING_DATASOURCE_PASSWORD:pathboot_test_password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create-drop         # clean slate for each test run
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc.batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+# ─── RAG Vector Store – test uses in-memory store (no persistence) ────────────
+rag:
+  store-path: /tmp/pathboot-vector-store-test.json  # temp store, cleared between runs
+
+# ─── Security: API key enforcement enabled for realistic test coverage ────────
+api:
+  security:
+    enabled: true
+
+# ─── Logging: moderate for test environments ────────────────────────────────────
+logging:
+  level:
+    root: WARN
+    com.pathboot: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+

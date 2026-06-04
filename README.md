@@ -1,226 +1,264 @@
-# Motivation of the project
-> Critical information about Norwegian tax, NAV, and immigration is almost exclusively available in Norwegian or English,
-> leaving newcomers who speak neither language entirely dependent on third-party helpers just to understand their own 
-> rights and obligations. 
+# PathBoot PI - Multilingual Domain Q&A Assistant
 
-> As an immigrant myself, I know how overwhelming it can be to navigate a new country's bureaucracy without clear information
-> about where to find answers in your native language. Many newcomers end up relying on friends, family, or paid services just
-> to understand basic information about taxes, social benefits, or visa requirements, etc.
+PathBoot PI is a Spring Boot service that answers questions about Norwegian Tax, NAV, and Immigration in English, Amharic, and Norwegian.
 
-> No waiting for a translator or relying on someone else, making the transition to life in Norway more independent and empowering
-> for everyone.
-
-> This project is a labor of love to empower newcomers with the knowledge they need to thrive in Norway, regardless of their 
-> language background. Newcomers (Ethiopian) who speak Amharic can now get the information they need in their own language.
-
-> PathBoot PI was built to break that dependency. By combining local AI models with a RAG pipeline, it delivers accurate, 
-> instant answers in Amharic, English or Norwegian, directly from official grounding documents.
-
-> No cloud, no API keys, no waiting for a translator or relying on someone else, making the transition to life 
-> in Norway more independent and empowering for everyone.
- 
-
-
-# PathBoot PI – Multilingual Domain Q&A Assistant
-
-> A **Spring Boot 3.4** application that answers questions about **Norwegian Tax**, **NAV**, and **Immigration** in **English**,
-> **Amharic**, and **Norwegian** using local AI models (Ollama/Mistral + NLLB-200) and a **Retrieval-Augmented Generation (RAG)**
-> pipeline — no cloud dependency required.
->
-> Access is protected by **API key authentication**. Call `POST /api/v1/auth/login` with your credentials to obtain
-> your key, then include it as the `X-API-Key` header on every chat request.
-
----
+It runs fully local with:
+- Ollama (`mistral`) for chat and classification support
+- Ollama (`nomic-embed-text`) for RAG embeddings
+- NLLB (`facebook/nllb-200-distilled-600M`) for Amharic <-> English translation
+- SQLite for persistence
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Tech Stack](#tech-stack)
-3. [Prerequisites](#prerequisites)
-4. [Project Structure](#project-structure)
-5. [Setup & Run](#setup--run)
-6. [Authentication](#authentication)
-7. [API Usage](#api-usage)
-8. [Configuration](#configuration)
-9. [Design Patterns](#design-patterns)
-10. [Running Tests](#running-tests)
+1. [What Runs Where](#what-runs-where)
+2. [Prerequisites](#prerequisites)
+3. [Quick Start (Manual)](#quick-start-manual)
+4. [Quick Start (Automated)](#quick-start-automated)
+5. [Docker Compose Run](#docker-compose-run)
+6. [Service Interaction Flow](#service-interaction-flow)
+7. [Authentication](#authentication)
+8. [API Usage](#api-usage)
+9. [Configuration](#configuration)
+10. [Run Tests](#run-tests)
 11. [Troubleshooting](#troubleshooting)
 
----
+## What Runs Where
 
-## Overview
-
-PathBoot PI accepts a user question in **any of three languages** and returns an answer in the **same language**:
-
-| Input language | Translation model      | Domain model       |
-|---------------|------------------------|--------------------|
-| English        | none                   | Ollama / Mistral   |
-| Norwegian      | Ollama / Mistral       | Ollama / Mistral   |
-| Amharic        | NLLB-200-Distilled-600M (local Python server) | Ollama / Mistral |
-
-The system automatically **detects the language** (via Unicode script + Norwegian keyword heuristics), **classifies the domain**
-(Tax / NAV / Immigration), routes to the matching **domain agent**, enriches the prompt with **RAG context** from a local vector store,
-and translates the response back if needed. Session history is persisted to **SQLite** and survives restarts.
-
-When the domain cannot be determined (**UNKNOWN**), the service short-circuits immediately — no agent or LLM is called —
-and returns a static clarification message in the user's own language.
-
----
-
-## Tech Stack
-
-| Component                | Technology                                          | Version      |
-|--------------------------|-----------------------------------------------------|--------------|
-| Language                 | Java                                                | 17           |
-| Framework                | Spring Boot                                         | 3.4.5        |
-| AI / LLM integration     | Spring AI                                           | 1.0.5        |
-| LLM model                | Ollama + Mistral (local)                            | latest       |
-| Embedding model (RAG)    | Ollama + nomic-embed-text (local)                   | latest       |
-| RAG vector store         | Spring AI `SimpleVectorStore` + JSON persistence    | —            |
-| Translation (Amharic)    | NLLB-200-Distilled-600M via Python/Flask server     | —            |
-| Security                 | Spring Security (API key via `X-API-Key` header)    | 3.4.5        |
-| Build                    | Maven                                               | 3.8+         |
-| Database                 | SQLite (persistent file, WAL mode)                  | 3.49.1.0     |
-| ORM                      | Spring Data JPA + Hibernate Community Dialects      | —            |
-| Connection pool          | HikariCP (pool-size=1 for SQLite single-writer)     | —            |
-| In-memory cache          | Caffeine (max 500 entries, 60-minute TTL)           | —            |
-| DTO mapping              | MapStruct                                           | 1.5.5.Final  |
-| Logging                  | Log4j2 (async, rolling file appenders)              | —            |
-| API documentation        | Springdoc OpenAPI / Swagger UI                      | 2.8.8        |
-| Boilerplate reduction    | Lombok                                              | —            |
-| Testing                  | JUnit 5 + Mockito                                   | —            |
-
----
+- Backend API: `http://localhost:8080`
+- Ollama API: `http://localhost:11434`
+- NLLB server: `http://localhost:5000`
+- Frontend (Vite dev): `http://localhost:5173`
+- Frontend (Docker Compose): `http://localhost:3000`
 
 ## Prerequisites
 
-### 1. Java 17+
+- Java 17+
+- Node.js 20+ (for `pathboot-ui`)
+- Docker Desktop
+- Ollama installed locally
+
+Check basics:
+
 ```powershell
-java -version   # must show 17 or higher
+java -version
+node -v
+docker --version
+ollama --version
 ```
 
-### 2. Maven 3.8+
+Pull required Ollama models:
+
 ```powershell
-mvn -version
+ollama pull mistral
+ollama pull nomic-embed-text
 ```
 
-### 3. Ollama with required models
-Install Ollama from https://ollama.ai, then pull both models:
-```powershell
-ollama pull mistral          # LLM for Q&A, classification, Norwegian translation
-ollama pull nomic-embed-text # Embedding model for the RAG vector store
-ollama serve                 # keep this running (default port 11434)
-```
+## Quick Start (Manual)
 
-### 4. Python 3.9+ with NLLB translation server dependencies
-```powershell
-pip install flask transformers torch sentencepiece sacremoses
-```
+Use this startup order:
+1. Ollama
+2. NLLB
+3. Backend
+4. Frontend
 
-### 5. (Optional) GPU support
-- A CUDA-enabled NVIDIA GPU significantly speeds up NLLB inference.
-- CPU-only works but NLLB-600M may take 30–90 s on the first call.
+### 1) Start Ollama
 
----
-
-## Project Structure
-
-```
-pathBootPI-1/
-├── pom.xml
-├── nllb_server.py                       # NLLB Python translation server (Flask)
-├── README.md
-├── DOCUMENTATION.md
-├── ADDING_NEW_DOMAIN.md
-├── TECHNOLOGY_CHOICES.md
-├── PATHBOOT_DOCS.md                     # Documentation index
-├── data/
-│   ├── pathboot-data.db                 # SQLite persistent database (WAL mode)
-│   └── vector-store.json                # Pre-computed RAG embeddings (fast restart)
-├── logs/                                # Log4j2 rolling logs
-└── src/
-    ├── main/
-    │   ├── java/com/pathboot/
-    │   │   ├── PathBootApplication.java
-    │   │   ├── agent/                   # DomainAgent interface + AbstractDomainAgent
-    │   │   │   ├── tax/TaxAgent.java
-    │   │   │   ├── nav/NavAgent.java
-    │   │   │   ├── immigration/ImmigrationAgent.java
-    │   │   │   └── factory/AgentFactory.java
-    │   │   ├── config/                  # Ollama, NLLB, Swagger, Async, Cache, Security configs
-    │   │   │   ├── SecurityConfig.java         # Spring Security filter chain
-    │   │   │   └── ApiSecurityProperties.java  # Binds api.security.* from application.yml
-    │   │   ├── controller/
-    │   │   │   ├── ChatController.java          # Chat Q&A endpoints
-    │   │   │   └── AuthController.java          # POST /api/v1/auth/login
-    │   │   ├── security/
-    │   │   │   └── ApiKeyAuthFilter.java        # OncePerRequestFilter — validates X-API-Key
-    │   │   ├── dto/                     # ChatRequest, ChatResponse, AuthRequest, AuthResponse
-    │   │   ├── enums/                   # DomainType, Language
-    │   │   ├── exception/               # Custom exceptions + GlobalExceptionHandler
-    │   │   ├── mapper/                  # MapStruct mappers
-    │   │   ├── model/                   # UserSession JPA entity
-    │   │   ├── repository/              # UserSessionRepository
-    │   │   ├── service/
-    │   │   │   ├── ChatFacadeService.java
-    │   │   │   ├── AsyncPersistenceService.java
-    │   │   │   ├── classification/DomainClassificationService.java
-    │   │   │   ├── rag/RagGroundingService.java
-    │   │   │   └── translation/
-    │   │   ├── session/                 # UserSessionManager
-                    └── util/                    # LanguageDetectionUtil, PathBootConstants, CacheKeyUtil
-    │   └── resources/
-    │       ├── application.yml
-    │       ├── log4j2.xml
-    │       └── grounding/
-    │           ├── tax/tax-grounding.txt
-    │           ├── nav/nav-grounding.txt
-    │           └── immigration/immigration-grounding.txt
-    └── test/
-        └── java/com/pathboot/
-            ├── agent/                   # AbstractDomainAgentTest, AgentFactoryTest
-            ├── security/                # ApiKeyAuthFilterTest
-            ├── service/                 # ChatFacadeServiceTest, DomainClassificationServiceTest
-            └── util/                    # LanguageDetectionUtilTest
-```
-
----
-
-## Setup & Run
-
-### Step 1 – Start Ollama
 ```powershell
 ollama serve
 ```
 
-### Step 2 – Start the NLLB server (required for Amharic support)
-```powershell
-cd C:\Users\Kidist\IdeaProjects\pathBootPI-1
-python nllb_server.py
-```
-> The first run downloads the NLLB model (~2.5 GB) automatically.
-> Subsequent starts are fast (model is cached by Hugging Face).
+In another terminal, verify:
 
-### Step 3 – Build and run the Spring Boot app
 ```powershell
-cd C:\Users\Kidist\IdeaProjects\pathBootPI-1
-mvn clean install -DskipTests
-mvn spring-boot:run
+Invoke-RestMethod -Method Get -Uri "http://localhost:11434/api/tags"
 ```
 
-> **First run:** The RAG vector store is built by chunking the grounding files and calling `nomic-embed-text` for each chunk. Embeddings are saved to
-> `data/vector-store.json`. Subsequent restarts load from disk — no re-embedding needed.
+### 2) Start NLLB translation service
 
-### Step 4 – Open Swagger UI
-Navigate to: http://localhost:8080/swagger-ui.html
+From `pathboot-pi`:
 
----
+```powershell
+docker build -f Dockerfile.nllb -t pathboot-nllb .
+docker rm -f pathboot-nllb 2>$null
+docker run -d --name pathboot-nllb -p 5000:5000 pathboot-nllb
+```
+
+Verify health:
+
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:5000/health"
+```
+
+### 3) Start backend (`pathboot-pi`)
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+### 4) Start frontend (`pathboot-ui`)
+
+```powershell
+cd ..\pathboot-ui
+npm install
+npm run dev
+```
+
+## Quick Start (Automated)
+
+From workspace root (`pathboot/`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-all.ps1
+```
+
+Stop services:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\stop-all.ps1
+```
+
+## Docker Compose Run
+
+### Profile Overview
+
+PathBoot supports three profiles for different environments:
+
+| Profile | Database | Use Case | Service URLs |
+|---------|----------|----------|--------------|
+| `local` (default) | SQLite | Local development | Ollama, NLLB on localhost |
+| `test` | PostgreSQL | Integration testing | PostgreSQL container in Compose |
+| `prod` | PostgreSQL | Production deployment | Environment-managed PostgreSQL |
+
+### Profile Activation Precedence
+
+1. **CLI/Environment override** (highest priority)
+   ```bash
+   SPRING_PROFILES_ACTIVE=prod docker compose up --build
+   ```
+
+2. **`.env` file value**
+   ```bash
+   # Set in .env: SPRING_PROFILES_ACTIVE=test
+   docker compose up --build
+   ```
+
+3. **Compose fallback default** (lowest priority – `local`)
+   ```bash
+   # No override, no .env → defaults to 'local'
+   docker compose up --build
+   ```
+
+### Setup
+
+1. Copy environment template:
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+2. Edit `.env` if needed (defaults work for local development).
+
+### Run Local (Default)
+
+```powershell
+# Uses docker-compose.yml only (SQLite, localhost services)
+docker compose up --build
+```
+
+Access at:
+- Backend: `http://localhost:8080`
+- Frontend: `http://localhost:3000`
+- Swagger: `http://localhost:8080/swagger-ui.html`
+
+### Run Test Environment
+
+```powershell
+# Uses docker-compose.yml + docker-compose.test.yml (PostgreSQL)
+SPRING_PROFILES_ACTIVE=test docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
+```
+
+Or set in `.env`:
+```bash
+SPRING_PROFILES_ACTIVE=test
+```
+
+Then:
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
+```
+
+### Run Production
+
+```powershell
+# Uses docker-compose.yml + docker-compose.prod.yml (PostgreSQL with strict security)
+SPRING_PROFILES_ACTIVE=prod \
+SPRING_DATASOURCE_URL=jdbc:postgresql://db.example.com:5432/pathboot_prod \
+SPRING_DATASOURCE_USERNAME=prod_user \
+SPRING_DATASOURCE_PASSWORD=<secure-password> \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+```
+
+### Startup Sequence
+
+All profiles enforce this health-based startup order:
+
+1. **Ollama** starts, waits 90s for model initialization
+2. **NLLB** starts, waits 180s for model load
+3. **Backend** waits for both to be `healthy`, then starts (60s startup window)
+4. **Frontend** waits for backend health, then starts
+
+This prevents premature backend startup failures due to missing dependencies.
+
+### Stop All Services
+
+```powershell
+docker compose down
+```
+
+To also remove volumes (careful – data loss):
+```powershell
+docker compose down -v
+```
+
+## Security Model
+
+### Authentication and Authorization
+- All protected endpoints require the `X-API-Key` header.
+- Authentication is stateless; no session cookies are used.
+- The API key filter uses timing-safe comparison.
+- Public routes stay limited to `/api/v1/auth/**`, `/swagger-ui/**`, `/api-docs/**`, `/v3/api-docs/**`, `/actuator/health`, `/actuator/info`, and `/error`.
+
+### Profile Security Rules
+| Profile | API key enforcement | Swagger | CORS | DB |
+|---|---|---|---|---|
+| local | enabled | enabled | allow all | SQLite |
+| test | enabled | enabled | localhost-only | PostgreSQL |
+| prod | enabled | disabled | `FRONTEND_URL` only | PostgreSQL |
+
+### Production Requirements
+- Set `FRONTEND_URL` for CORS restrictions.
+- Set all `PATHBOOT_*` secrets from environment variables or a secret manager.
+- Do not expose Swagger/OpenAPI in production.
+- Keep actuator exposure to `health` and `info` only.
+- Use PostgreSQL `validate` mode in production.
+
+## Service Interaction Flow
+
+End-to-end request flow:
+
+1. User sends a question in `pathboot-ui`.
+2. Frontend calls backend endpoints in `pathboot-pi`.
+3. Backend detects language and classifies domain.
+4. If needed, backend translates via NLLB (`/translate`).
+5. Backend retrieves top-k grounding chunks (RAG) and calls Ollama.
+6. Backend translates back (if needed), persists session/interaction, and returns response.
+
+`pathboot-pi` is the orchestrator between UI, Ollama, NLLB, and SQLite.
 
 ## Authentication
 
-All `/api/v1/chat` endpoints require an `X-API-Key` header. The login endpoint is always public.
+All `/api/v1/chat/**` routes require `X-API-Key`.
 
-### Step 1 — Login to get your API key
+Get key:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/v1/auth/login" `
@@ -228,15 +266,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/v1/auth/login" `
   -Body '{"username":"admin","password":"pathboot-admin-2026"}'
 ```
 
-Response:
-```json
-{
-  "apiKey": "pathboot-dev-key-2026",
-  "instructions": "Click the Authorize button in Swagger and paste the apiKey value."
-}
-```
-
-### Step 2 — Include the key in every chat request
+Use key:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/v1/chat" `
@@ -245,174 +275,133 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/v1/chat" `
   -Body '{"userInput":"What is the tax filing deadline?","sessionId":null}'
 ```
 
-### Step 3 — Via Swagger UI
-
-1. Open http://localhost:8080/swagger-ui.html
-2. Go to **Authentication → POST /api/v1/auth/login** → Try it out → Execute with your credentials
-3. Copy the `apiKey` from the response
-4. Click the **Authorize 🔓** button (top right) → paste the key → **Authorize** → **Close**
-5. All subsequent requests in Swagger include the header automatically
-
-### Default credentials (from `application.yml`)
-
-| Username | Password | API Key returned on login |
-|----------|----------|--------------------------|
-| `admin` | `pathboot-admin-2026` | `pathboot-dev-key-2026` |
-| `user` | `pathboot-user-2026` | `pathboot-local-key-001` |
-
-Each user receives their **own dedicated API key** — configured via `api.security.user-keys` in `application.yml`.
-
-> To add credentials, rotate keys, or map users to keys — edit `api.security.users`, `api.security.api-keys`,
-> and `api.security.user-keys` in `application.yml` and restart.
-> To disable authentication for local dev — set `api.security.enabled: false`.
-
----
+Default credentials are configured in `src/main/resources/application.yml` under `api.security.users`.
 
 ## API Usage
 
-### POST `/api/v1/auth/login` – Obtain API key *(public — no key needed)*
+- `POST /api/v1/auth/login` (public)
+- `POST /api/v1/chat` (requires `X-API-Key`)
+- `GET /api/v1/chat/sessions/{sessionId}/history`
+- `DELETE /api/v1/chat/sessions/{sessionId}`
 
-```json
-{ "username": "admin", "password": "pathboot-admin-2026" }
-```
+Swagger UI:
 
-### POST `/api/v1/chat` – Ask a question *(requires X-API-Key)*
-
-**Request body:**
-```json
-{
-  "userInput": "What is the income tax rate in Norway?",
-  "sessionId": null
-}
-```
-
-**Response:**
-```json
-{
-  "responseText": "The general income tax rate in Norway is 22% ...",
-  "detectedLanguage": "ENGLISH",
-  "detectedDomain": "TAX",
-  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-  "timestamp": "2026-04-28T10:30:00"
-}
-```
-
-> **Tip:** Save the `sessionId` and pass it in future requests to continue the conversation.
-
----
-
-### Norwegian example
-```json
-{ "userInput": "Hva er trinnskatt?", "sessionId": null }
-```
-
-### Amharic example
-```json
-{ "userInput": "ወደ ኖርዌይ ለመሄድ ምን ዓይነት ቪዛ ያስፈልጋል?", "sessionId": null }
-```
-
-### UNKNOWN domain — clarification response
-If the question cannot be classified, a static clarification message is returned in the user's own language (no LLM call made):
-```json
-{
-  "responseText": "I'm sorry, I couldn't determine which topic your question relates to. I can help with Norwegian Tax (skatt), NAV (welfare and benefits), or Immigration (UDI)...",
-  "detectedLanguage": "ENGLISH",
-  "detectedDomain": "UNKNOWN"
-}
-```
-
----
-
-### GET `/api/v1/chat/sessions/{sessionId}/history`
-
-```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/chat/sessions/YOUR-SESSION-ID/history" `
-  -Headers @{"X-API-Key"="pathboot-dev-key-2026"}
-```
-
-### DELETE `/api/v1/chat/sessions/{sessionId}`
-
-```powershell
-Invoke-RestMethod -Method Delete -Uri "http://localhost:8080/api/v1/chat/sessions/YOUR-SESSION-ID" `
-  -Headers @{"X-API-Key"="pathboot-dev-key-2026"}
-```
-
----
+- `http://localhost:8080/swagger-ui.html`
 
 ## Configuration
 
-All configuration is in `src/main/resources/application.yml`:
+### Configuration Files
 
-| Property | Default | Description |
-|----------|---------|-------------|
-| `api.security.enabled` | `true` | Set `false` to disable API key enforcement |
-| `api.security.api-keys` | see yml | List of valid API keys (shared pool) |
-| `api.security.users.admin` | `pathboot-admin-2026` | Login password for `admin` user |
-| `api.security.users.user` | `pathboot-user-2026` | Login password for `user` user |
-| `api.security.user-keys.admin` | `pathboot-dev-key-2026` | Per-user key returned to `admin` on login |
-| `api.security.user-keys.user` | `pathboot-local-key-001` | Per-user key returned to `user` on login |
-| `spring.ai.ollama.base-url` | `http://localhost:11434` | Ollama server URL |
-| `spring.ai.ollama.chat.options.model` | `mistral` | LLM model name |
-| `spring.ai.ollama.embedding.options.model` | `nomic-embed-text` | Embedding model for RAG |
-| `spring.ai.ollama.chat.options.keep-alive` | `-1m` | Never unload model from RAM |
-| `nllb.server.base-url` | `http://localhost:5000` | NLLB Python server URL |
-| `nllb.server.read-timeout-ms` | `120000` | 2-minute timeout for NLLB CPU inference |
-| `spring.datasource.url` | `jdbc:sqlite:./data/pathboot-data.db` | SQLite database file path |
-| `spring.datasource.hikari.maximum-pool-size` | `1` | Single writer — prevents `SQLITE_BUSY` |
-| `spring.cache.caffeine.spec` | *(removed from YAML)* | Caffeine is configured programmatically in `CacheConfig.java` (max 500 entries, 60 min TTL) |
-| `rag.top-k` | `3` | Number of RAG chunks retrieved per query |
-| `rag.store-path` | `./data/vector-store.json` | Persisted embeddings file |
-| `rag.enabled` | `true` | Set `false` to skip RAG |
-| `server.port` | `8080` | Spring Boot HTTP port |
+| File | Purpose | Profile |
+|------|---------|---------|
+| `src/main/resources/application.yml` | Shared base config (Ollama, NLLB, API, Swagger) | All |
+| `src/main/resources/application-local.yml` | SQLite datasource, dev logging | `local` |
+| `src/main/resources/application-test.yml` | PostgreSQL, test logging, in-memory RAG | `test` |
+| `src/main/resources/application-prod.yml` | PostgreSQL, strict security, minimal logging | `prod` |
 
----
+### Important Configuration Keys
 
-## Design Patterns
+**Common to all profiles:**
+- `spring.ai.ollama.base-url` – Ollama endpoint
+- `spring.ai.ollama.chat.options.model` – LLM model
+- `spring.ai.ollama.embedding.options.model` – Embedding model
+- `nllb.server.base-url` – NLLB translation endpoint
+- `rag.top-k` – Number of RAG chunks per query
+- `api.security.*` – API keys and credentials
 
-| Pattern | Where Used |
-|---------|-----------|
-| **Singleton** | All Spring beans |
-| **Factory (auto-discovery)** | `AgentFactory` – injects `List<DomainAgent>` and auto-registers every `@Component` agent; no wiring needed for new domains |
-| **Template Method** | `AbstractDomainAgent.processUserQuestion()` |
-| **Facade** | `ChatFacadeService` – single entry point for the entire pipeline |
-| **Strategy** | `TranslationService` – routes to Ollama or NLLB depending on language |
-| **Adapter** | `OllamaTranslationService` / `NllbTranslationService` |
-| **Builder** | `ChatResponse`, `AuthResponse`, `UserSession` – Lombok `@Builder` |
-| **Chain of Responsibility** | `ChatFacadeService` pipeline: detect → translate → classify → (short-circuit UNKNOWN) → RAG → LLM → back-translate → persist |
-| **Filter** | `ApiKeyAuthFilter` – `OncePerRequestFilter` validating `X-API-Key` header |
-| **Two-tier cache** | `UserSessionManager` (`ConcurrentHashMap`) + SQLite (cold tier) |
+**Database-specific (per profile):**
+- `local`: SQLite via `spring.datasource.url` (SQLiteDialect)
+- `test`: PostgreSQL via `SPRING_DATASOURCE_*` env vars (PostgreSQLDialect)
+- `prod`: PostgreSQL via `SPRING_DATASOURCE_*` env vars (PostgreSQLDialect)
 
----
+### Environment Variable Override
 
-## Running Tests
+All secrets and runtime URLs support environment variable override:
 
-```powershell
-mvn test
+```bash
+# Backend API
+PATHBOOT_API_KEY_1=<secure-key-1>
+PATHBOOT_API_KEY_2=<secure-key-2>
+PATHBOOT_ADMIN_PASSWORD=<admin-pass>
+PATHBOOT_USER_PASSWORD=<user-pass>
+
+# Backend datasource (test/prod)
+SPRING_DATASOURCE_URL=jdbc:postgresql://host:5432/db
+SPRING_DATASOURCE_USERNAME=<username>
+SPRING_DATASOURCE_PASSWORD=<password>
+
+# LLM/Translation service URLs (normally auto-wired in compose)
+SPRING_AI_OLLAMA_BASE_URL=http://ollama:11434
+NLLB_SERVER_BASE_URL=http://nllb:5000
 ```
 
-**154 tests, 0 failures.** Tests cover:
-- `ApiKeyAuthFilterTest` – valid key pass-through, missing/invalid key → 401
-- `LanguageDetectionUtilTest` – Ethiopic script, Norwegian special chars, Norwegian keywords without æ/ø/å
-- `ChatFacadeServiceTest` – full pipeline: English, Norwegian, Amharic, UNKNOWN domain (3 language variants)
-- `NllbTranslationServiceTest` – NLLB translation happy path + error cases
-- `DomainClassificationServiceTest` – TAX / NAV / IMMIGRATION keyword scoring + UNKNOWN edge cases
-- `AgentFactoryTest` – domain agent registration and lookup
-- `AbstractDomainAgentTest` – Template Method pipeline (mocked LLM + RAG)
+Primary config file:
 
----
+- `src/main/resources/application.yml`
+
+Important keys:
+
+- `spring.ai.ollama.base-url`
+- `spring.ai.ollama.chat.options.model`
+- `spring.ai.ollama.embedding.options.model`
+- `nllb.server.base-url`
+- `rag.top-k`
+- `api.security.*`
+- `server.port`
+
+## Run Tests
+
+```powershell
+.\mvnw.cmd test
+```
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| `Connection refused :11434` | Run `ollama serve` first |
-| `Connection refused :5000` | Run `python nllb_server.py` first |
-| `401 Unauthorized` on API call | Include `X-API-Key: pathboot-dev-key-2026` header |
-| Swagger UI shows 401 | The page itself is public — open http://localhost:8080/swagger-ui.html directly |
-| Norwegian detected as English | Fixed: keyword detection now covers sentences without æ/ø/å |
-| UNKNOWN domain response | Question did not match any domain keywords — rephrase mentioning tax, NAV, or immigration |
-| NLLB model download stuck | Check internet connection; model is ~2.5 GB |
-| `nomic-embed-text` not found | Run `ollama pull nomic-embed-text` |
-| RAG vector store not building | Verify `rag.enabled=true` and Ollama is running |
-| Slow first Amharic response | Expected — NLLB-600M on CPU takes 30–90 s on first call |
-| `SQLITE_BUSY` | Already mitigated: pool-size=1 + WAL + busy_timeout=30000 |
+| Problem | Fix |
+|---|---|
+| `Connection refused` on `11434` | Start Ollama with `ollama serve` or check `docker logs pathboot-ollama` |
+| `Connection refused` on `5000` | Check `docker logs pathboot-nllb` – model may still be loading (normal for first run) |
+| Backend fails to start in Compose | Check `docker logs pathboot-backend` – waits for Ollama + NLLB healthy (up to 90s + 180s) |
+| `401 Unauthorized` | Include `X-API-Key` from `/api/v1/auth/login` |
+| Slow first Amharic response | Expected on first model warm-up (NLLB cold-load) |
+| Missing embeddings model | Run `ollama pull nomic-embed-text` |
+| RAG not rebuilding after grounding changes | Delete `data/vector-store.json` and restart backend |
+| Compose health checks timeout | Check service logs: `docker logs <container>` – increase `start_period` if needed |
+| PostgreSQL connection fails (test/prod) | Verify `docker logs pathboot-postgres-test` and `SPRING_DATASOURCE_*` env vars match |
+| Frontend cannot reach backend | Verify `VITE_API_BASE_URL` matches backend container URL in Compose override |
+
+## Profiled Startup Dependencies
+
+When using Docker Compose, startup is health-gated to prevent cascading failures:
+
+```
+Ollama (90s start_period)
+   ↓
+   └─ NLLB (180s start_period)
+   ↓
+   └─ Backend (waits for both healthy, 60s startup)
+   ↓
+   └─ Frontend (waits for backend healthy)
+```
+
+Check individual service health:
+```powershell
+# Ollama
+docker exec pathboot-ollama curl -f http://localhost:11434/api/tags
+
+# NLLB
+docker exec pathboot-nllb curl -f http://localhost:5000/health
+
+# Backend
+docker exec pathboot-backend curl -f http://localhost:8080/actuator/health
+
+# Frontend
+docker exec pathboot-frontend curl -f http://localhost:80
+```
+
+## Documentation Map
+
+- High-level index: `PATHBOOT_DOCS.md`
+- Technical deep dive: `DOCUMENTATION.md`
+- Technology rationale: `TECHNOLOGY_CHOICES.md`
+- Domain extension guide: `ADDING_NEW_DOMAIN.md`

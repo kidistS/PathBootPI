@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version>
+        <version>3.5.11</version>
         <relativePath/>
     </parent>
 
@@ -22,16 +22,26 @@
 
     <properties>
         <java.version>17</java.version>
-        <spring-ai.version>1.0.5</spring-ai.version>
-        <springdoc.version>2.8.8</springdoc.version>
+        <spring-ai.version>1.0.6</spring-ai.version>
+        <spring-framework.version>6.2.18</spring-framework.version>
+        <springdoc.version>2.8.17</springdoc.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <sqlite.version>3.49.1.0</sqlite.version>
         <lombok.version>1.18.32</lombok.version>
+        <tomcat.version>10.1.55</tomcat.version>
+        <log4j2.version>2.25.4</log4j2.version>
+        <spring-security.version>6.5.10</spring-security.version>
+        <assertj.version>3.27.7</assertj.version>
     </properties>
 
     <!-- ===== Spring AI BOM ===== -->
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.20.0</version>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
@@ -87,6 +97,14 @@
             <version>${sqlite.version}</version>
             <scope>runtime</scope>
         </dependency>
+
+        <!-- ===== PostgreSQL JDBC Driver (for test and prod profiles) ===== -->
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>42.7.11</version>
+                <scope>runtime</scope>
+            </dependency>
 
         <!-- ===== Hibernate Community Dialects (SQLiteDialect) ===== -->
         <dependency>
@@ -148,6 +166,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <version>2.18.6</version>
         </dependency>
 
         <!-- ===== Spring Boot Actuator (health/info) ===== -->
