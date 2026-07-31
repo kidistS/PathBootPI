@@ -1,6 +1,6 @@
 # PathBoot PI - Technical Documentation
 
-> Last updated: 2026-05-29
+> Last updated: 2026-07-31
 
 ## 1. Project Goal
 
@@ -20,14 +20,9 @@ PathBoot PI is a multilingual assistant focused on Norwegian Tax, NAV, and Immig
 - Ollama: `http://localhost:11434`
 - NLLB Flask server: `http://localhost:5000`
 
-### Docker Compose
+### Optional frontend
 
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8080`
-- Ollama container: `http://localhost:11434`
-- NLLB container: `http://localhost:5000`
-
-In Compose mode, backend must use container hostnames (`ollama`, `nllb`) instead of `localhost`.
+- `pathboot-ui` can run separately (if present in workspace) and call backend at `http://localhost:8080`.
 
 ## 3. Architecture Overview
 
@@ -122,16 +117,18 @@ Run services in order:
 
 Commands are documented in `README.md`.
 
-### Mode B: automated startup scripts
+### Mode B: automated startup scripts (recommended)
 
-From workspace root:
+From this repository root (`PathBootPI/`):
 
-- `start-all.ps1`
-- `stop-all.ps1`
+- `start-local.ps1`
+- `stop-local.ps1`
+- `smoke-api.ps1` (login + protected chat smoke test)
 
-### Mode C: Docker Compose
+### Mode C: Docker Compose (if available in your workspace)
 
-Use root `docker-compose.yml` to run all services together.
+Some environments include compose files at a higher-level workspace. This repository's
+default documented and validated flow is `start-local.ps1` / `stop-local.ps1`.
 
 ## 8. Data Grounding and RAG
 
@@ -155,6 +152,12 @@ Backend:
 .\mvnw.cmd test
 ```
 
+Manual API smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\smoke-api.ps1
+```
+
 Frontend:
 
 ```powershell
@@ -165,9 +168,10 @@ npm test
 ## 10. Key Configuration References
 
 - `src/main/resources/application.yml`
-- `../docker-compose.yml`
-- `../start-all.ps1`
-- `../stop-all.ps1`
+- `../pathboot-ui/README.md` (if frontend repo is present)
+- `start-local.ps1`
+- `stop-local.ps1`
+- `smoke-api.ps1`
 - `../pathboot-ui/vite.config.ts`
 
 ## 11. Related Documents

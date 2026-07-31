@@ -1,7 +1,7 @@
 # PathBoot PI – Technology Choices & Rationale
 
 > **Audience:** developers joining or maintaining the project.  
-> **Last updated:** 2026-05-29
+> **Last updated:** 2026-07-31
 
 This document explains **every technology, library, and framework** used in PathBoot PI,
 and—critically—**why** each was chosen over the alternatives.
@@ -11,9 +11,9 @@ and—critically—**why** each was chosen over the alternatives.
 ## Table of Contents
 
 1. [Runtime Platform – Java 17](#1-runtime-platform--java-17)
-2. [Framework – Spring Boot 3.4.5](#2-framework--spring-boot-345)
+2. [Framework – Spring Boot 3.5.11](#2-framework--spring-boot-3511)
 3. [LLM Runtime – Ollama + Mistral](#3-llm-runtime--ollama--mistral)
-4. [LLM Integration – Spring AI 1.0.5](#4-llm-integration--spring-ai-105)
+4. [LLM Integration – Spring AI 1.0.6](#4-llm-integration--spring-ai-106)
 5. [Embedding & RAG – nomic-embed-text + SimpleVectorStore](#5-embedding--rag--nomic-embed-text--simplevectorstore)
 6. [Amharic Translation – NLLB-200-Distilled-600M (Python / Flask)](#6-amharic-translation--nllb-200-distilled-600m-python--flask)
 7. [Database – SQLite + Hibernate Community Dialects](#7-database--sqlite--hibernate-community-dialects)
@@ -36,11 +36,12 @@ and—critically—**why** each was chosen over the alternatives.
 
 ## Execution Modes Context
 
-The technology choices in this document support three run modes:
+The technology choices in this document support the run modes used by the project:
 
 1. Manual local startup (`ollama` + `nllb` + backend + frontend)
-2. Automated local startup (`start-all.ps1` / `stop-all.ps1` at workspace root)
-3. Docker Compose startup (`docker-compose.yml` at workspace root)
+2. Automated local startup (`start-local.ps1` / `stop-local.ps1` in this repo)
+3. API smoke testing (`smoke-api.ps1` in this repo)
+4. Optional Docker Compose startup (if compose files exist in your wider workspace)
 
 For run commands and service startup order, use `README.md` as the source of truth.
 
@@ -70,11 +71,11 @@ For run commands and service startup order, use `README.md` as the source of tru
 
 ---
 
-## 2. Framework – Spring Boot 3.4.5
+## 2. Framework – Spring Boot 3.5.11
 
 | Attribute | Value |
 |-----------|-------|
-| Version   | 3.4.5 |
+| Version   | 3.5.11 |
 | Parent POM | `spring-boot-starter-parent` |
 
 **What it provides:**
@@ -137,11 +138,11 @@ natural choice once the LLM integration decision was made.
 
 ---
 
-## 4. LLM Integration – Spring AI 1.0.5
+## 4. LLM Integration – Spring AI 1.0.6
 
 | Attribute | Value |
 |-----------|-------|
-| BOM version | `1.0.5` |
+| BOM version | `1.0.6` |
 | Dependencies | `spring-ai-starter-model-ollama`, `spring-ai-vector-store` |
 
 **What Spring AI provides:**
@@ -634,7 +635,7 @@ If this order is wrong, MapStruct cannot see Lombok-generated accessors and prod
 Client (HTTP)
     │
     ▼
-Spring Boot 3.4.5 / Tomcat (embedded)
+Spring Boot 3.5.11 / Tomcat (embedded)
     │
     ▼
 ChatFacadeService  ──(Caffeine cache)──▶ domainAnswers (60 min TTL)

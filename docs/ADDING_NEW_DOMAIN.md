@@ -1,6 +1,6 @@
 # PathBoot PI – How to Add a New Domain
 
-> **Last updated:** 2026-05-29
+> **Last updated:** 2026-07-31
 > **Example below uses `EDUCATION` as the new domain.**
 
 ## Before You Start

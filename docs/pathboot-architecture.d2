@@ -1,11 +1,12 @@
 # PathBoot PI – Architecture Diagram (D2)
 #
-# ⚠️  This file has been consolidated.
-# The full diagram source with context and explanation lives in the master document:
+# This is the canonical diagram source for system architecture.
+# High-level context and runtime topology notes are in:
 #     PATHBOOT_DOCS.md  §2.1
 #
-# To render: paste the D2 block from PATHBOOT_DOCS.md at https://play.d2lang.com
-# or render via CLI:  d2 diagrams/pathboot-architecture.d2 diagrams/pathboot-architecture.svg
+# To render in browser: https://play.d2lang.com
+# To render via CLI from repo root:
+#     d2 docs/pathboot-architecture.d2 docs/pathboot-architecture.svg
 
 # ###############################################################################
 # EXTERNAL CLIENTS
@@ -163,26 +164,46 @@ app: PathBoot PI {
 }
 
 # ###############################################################################
-# EXTERNAL INFRASTRUCTURE
+# EXTERNAL INFRASTRUCTURE (CONTAINER-AWARE)
 # ###############################################################################
-ollama: Ollama (localhost:11434) {
-  style.fill: "#ede7f6"
-  style.stroke: "#6c3483"
+runtime: Local Runtime (Developer Machine) {
+  style.fill: "#f8f9f9"
+  style.stroke: "#7f8c8d"
 
-  mistral: mistral\n(chat model) {
-    shape: rectangle
-    style.fill: "#d7bde2"
-  }
-  nomic: nomic-embed-text\n(embedding model) {
-    shape: rectangle
-    style.fill: "#d7bde2"
-  }
-}
+  host_proc: Host Processes {
+    style.fill: "#f4f6f7"
+    style.stroke: "#95a5a6"
 
-nllb_py: NLLB Python Server\n(localhost:5000) {
-  shape: rectangle
-  style.fill: "#fef9e7"
-  style.stroke: "#b7950b"
+    ollama: Ollama (localhost:11434) {
+      style.fill: "#ede7f6"
+      style.stroke: "#6c3483"
+
+      mistral: mistral\n(chat model) {
+        shape: rectangle
+        style.fill: "#d7bde2"
+      }
+      nomic: nomic-embed-text\n(embedding model) {
+        shape: rectangle
+        style.fill: "#d7bde2"
+      }
+    }
+  }
+
+  docker: Docker Engine / Desktop {
+    style.fill: "#ebf5fb"
+    style.stroke: "#2e86c1"
+
+    nllb_container: Container: pathboot-nllb {
+      style.fill: "#d6eaf8"
+      style.stroke: "#2e86c1"
+
+      nllb_py: NLLB Python Server\n(localhost:5000) {
+        shape: rectangle
+        style.fill: "#fef9e7"
+        style.stroke: "#b7950b"
+      }
+    }
+  }
 }
 
 sqlite: SQLite DB\n(./data/pathboot-data.db) {

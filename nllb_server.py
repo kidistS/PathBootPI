@@ -37,7 +37,7 @@ NLLB language codes used by PathBoot PI
 
 import logging
 from flask import Flask, request, jsonify
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 
 # ── Logging ──────────────────────────────────────────────────────────────────
@@ -68,22 +68,39 @@ logger.info("Using device: %s", "GPU (CUDA)" if device == 0 else "CPU")
 model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
 logger.info("Model loaded successfully.")
 
-# Build the pipeline ONCE so every request reuses the loaded weights.
-# src_lang / tgt_lang are overridden per-call via keyword arguments.
-logger.info("Building translation pipeline (cached for all requests)...")
-_translator_pipeline = pipeline(
-    task="translation",
-    model=model,
-    tokenizer=tokenizer,
-    device=device,
-    max_length=MAX_LENGTH,
-)
-logger.info("Translation pipeline ready.")
+def _translate_text(text: str, source_language: str, target_language: str) -> str:
+    """Translate text using the loaded NLLB model directly."""
+    tokenizer.src_lang = source_language
+    inputs = tokenizer(text, return_tensors="pt")
+
+    if device == 0:
+        inputs = {key: value.to(model.device) for key, value in inputs.items()}
+
+    lang_code_to_id = getattr(tokenizer, "lang_code_to_id", None)
+    if isinstance(lang_code_to_id, dict) and target_language in lang_code_to_id:
+        forced_bos_token_id = lang_code_to_id[target_language]
+    elif hasattr(tokenizer, "get_lang_id"):
+        forced_bos_token_id = tokenizer.get_lang_id(target_language)
+    else:
+        forced_bos_token_id = tokenizer.convert_tokens_to_ids(target_language)
+
+    if forced_bos_token_id is None or forced_bos_token_id < 0:
+        raise ValueError(f"Unsupported target language token: {target_language}")
+
+    translated_tokens = model.generate(
+        **inputs,
+        forced_bos_token_id=forced_bos_token_id,
+        max_length=MAX_LENGTH,
+    )
+    return tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+
+
+logger.info("Direct translation path ready.")
 
 # ── Warm-up: run a tiny inference so the first real call is fast ──────────────
 logger.info("Running warm-up inference to pre-JIT the model...")
 try:
-    _translator_pipeline("hello", src_lang="eng_Latn", tgt_lang="amh_Ethi")
+    _translate_text("hello", "eng_Latn", "amh_Ethi")
     logger.info("Warm-up complete.")
 except Exception as _warm_ex:
     logger.warning("Warm-up inference failed (non-fatal): %s", _warm_ex)
@@ -105,7 +122,7 @@ def warmup():
     Called by the Spring Boot application at startup (ApplicationReadyEvent).
     """
     try:
-        _translator_pipeline("hello", src_lang="eng_Latn", tgt_lang="amh_Ethi")
+        _translate_text("hello", "eng_Latn", "amh_Ethi")
         return jsonify({"status": "warm"}), 200
     except Exception as ex:
         logger.warning("Warmup request failed: %s", ex)
@@ -149,12 +166,7 @@ def translate():
     # ── Translate ─────────────────────────────────────────────────────────────
     logger.info("Translating [%s -> %s]: %.80s...", source_language, target_language, text)
     try:
-        result = _translator_pipeline(
-            text,
-            src_lang=source_language,
-            tgt_lang=target_language,
-        )
-        translated_text = result[0]["translation_text"]
+        translated_text = _translate_text(text, source_language, target_language)
         logger.info("Translation complete: %.80s...", translated_text)
         return jsonify({"translated_text": translated_text}), 200
 

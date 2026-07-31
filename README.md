@@ -12,9 +12,9 @@ It runs fully local with:
 
 1. [What Runs Where](#what-runs-where)
 2. [Prerequisites](#prerequisites)
-3. [Quick Start (Manual)](#quick-start-manual)
-4. [Quick Start (Automated)](#quick-start-automated)
-5. [Docker Compose Run](#docker-compose-run)
+3. [Quick Start (Automated - Recommended)](#quick-start-automated---recommended)
+4. [Quick Start (Manual)](#quick-start-manual)
+5. [Manual API Testing](#manual-api-testing)
 6. [Service Interaction Flow](#service-interaction-flow)
 7. [Authentication](#authentication)
 8. [API Usage](#api-usage)
@@ -27,13 +27,12 @@ It runs fully local with:
 - Backend API: `http://localhost:8080`
 - Ollama API: `http://localhost:11434`
 - NLLB server: `http://localhost:5000`
-- Frontend (Vite dev): `http://localhost:5173`
-- Frontend (Docker Compose): `http://localhost:3000`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Frontend: optional sibling repo (`pathboot-ui`) if present in your workspace
 
 ## Prerequisites
 
-- Java 17+
-- Node.js 20+ (for `pathboot-ui`)
+- Java 17+ (Java 17 recommended)
 - Docker Desktop
 - Ollama installed locally
 
@@ -41,7 +40,6 @@ Check basics:
 
 ```powershell
 java -version
-node -v
 docker --version
 ollama --version
 ```
@@ -51,6 +49,32 @@ Pull required Ollama models:
 ```powershell
 ollama pull mistral
 ollama pull nomic-embed-text
+```
+
+## Quick Start (Automated - Recommended)
+
+From the project root (`PathBootPI/`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-local.ps1
+```
+
+Optional: force NLLB image rebuild:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-local.ps1 -RebuildNllb
+```
+
+Stop services:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\stop-local.ps1
+```
+
+Run API smoke test (login + protected chat call):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\smoke-api.ps1
 ```
 
 ## Quick Start (Manual)
@@ -95,6 +119,12 @@ Invoke-RestMethod -Method Get -Uri "http://localhost:5000/health"
 .\mvnw.cmd spring-boot:run
 ```
 
+If your local JDK is newer and Maven fails in `testCompile`, run:
+
+```powershell
+.\mvnw.cmd "-Dmaven.test.skip=true" "-Dspring-boot.run.profiles=local" spring-boot:run
+```
+
 ### 4) Start frontend (`pathboot-ui`)
 
 ```powershell
@@ -103,120 +133,26 @@ npm install
 npm run dev
 ```
 
-## Quick Start (Automated)
+## Manual API Testing
 
-From workspace root (`pathboot/`):
+### Option A: Swagger UI
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start-all.ps1
-```
+1. Open `http://localhost:8080/swagger-ui.html`
+2. Call `POST /api/v1/auth/login` with:
+   - `username`: `admin`
+   - `password`: `pathboot-admin-2026`
+3. Copy `apiKey` from response and click **Authorize**
+4. Call `POST /api/v1/chat` with a test question
 
-Stop services:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\stop-all.ps1
-```
-
-## Docker Compose Run
-
-### Profile Overview
-
-PathBoot supports three profiles for different environments:
-
-| Profile | Database | Use Case | Service URLs |
-|---------|----------|----------|--------------|
-| `local` (default) | SQLite | Local development | Ollama, NLLB on localhost |
-| `test` | PostgreSQL | Integration testing | PostgreSQL container in Compose |
-| `prod` | PostgreSQL | Production deployment | Environment-managed PostgreSQL |
-
-### Profile Activation Precedence
-
-1. **CLI/Environment override** (highest priority)
-   ```bash
-   SPRING_PROFILES_ACTIVE=prod docker compose up --build
-   ```
-
-2. **`.env` file value**
-   ```bash
-   # Set in .env: SPRING_PROFILES_ACTIVE=test
-   docker compose up --build
-   ```
-
-3. **Compose fallback default** (lowest priority – `local`)
-   ```bash
-   # No override, no .env → defaults to 'local'
-   docker compose up --build
-   ```
-
-### Setup
-
-1. Copy environment template:
-   ```powershell
-   Copy-Item .env.example .env
-   ```
-
-2. Edit `.env` if needed (defaults work for local development).
-
-### Run Local (Default)
+### Option B: PowerShell calls
 
 ```powershell
-# Uses docker-compose.yml only (SQLite, localhost services)
-docker compose up --build
-```
+$loginBody = @{ username = "admin"; password = "pathboot-admin-2026" } | ConvertTo-Json
+$login = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/v1/auth/login" -ContentType "application/json" -Body $loginBody
+$apiKey = $login.apiKey
 
-Access at:
-- Backend: `http://localhost:8080`
-- Frontend: `http://localhost:3000`
-- Swagger: `http://localhost:8080/swagger-ui.html`
-
-### Run Test Environment
-
-```powershell
-# Uses docker-compose.yml + docker-compose.test.yml (PostgreSQL)
-SPRING_PROFILES_ACTIVE=test docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
-```
-
-Or set in `.env`:
-```bash
-SPRING_PROFILES_ACTIVE=test
-```
-
-Then:
-```powershell
-docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
-```
-
-### Run Production
-
-```powershell
-# Uses docker-compose.yml + docker-compose.prod.yml (PostgreSQL with strict security)
-SPRING_PROFILES_ACTIVE=prod \
-SPRING_DATASOURCE_URL=jdbc:postgresql://db.example.com:5432/pathboot_prod \
-SPRING_DATASOURCE_USERNAME=prod_user \
-SPRING_DATASOURCE_PASSWORD=<secure-password> \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
-```
-
-### Startup Sequence
-
-All profiles enforce this health-based startup order:
-
-1. **Ollama** starts, waits 90s for model initialization
-2. **NLLB** starts, waits 180s for model load
-3. **Backend** waits for both to be `healthy`, then starts (60s startup window)
-4. **Frontend** waits for backend health, then starts
-
-This prevents premature backend startup failures due to missing dependencies.
-
-### Stop All Services
-
-```powershell
-docker compose down
-```
-
-To also remove volumes (careful – data loss):
-```powershell
-docker compose down -v
+$chatBody = @{ userInput = "What services does NAV provide?"; sessionId = $null } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/v1/chat" -Headers @{ "X-API-Key" = $apiKey } -ContentType "application/json" -Body $chatBody
 ```
 
 ## Security Model
@@ -359,45 +295,13 @@ Important keys:
 
 | Problem | Fix |
 |---|---|
-| `Connection refused` on `11434` | Start Ollama with `ollama serve` or check `docker logs pathboot-ollama` |
-| `Connection refused` on `5000` | Check `docker logs pathboot-nllb` – model may still be loading (normal for first run) |
-| Backend fails to start in Compose | Check `docker logs pathboot-backend` – waits for Ollama + NLLB healthy (up to 90s + 180s) |
+| `Connection refused` on `11434` | Start Ollama with `ollama serve` |
+| `Connection refused` on `5000` | Check `docker logs pathboot-nllb` - first NLLB model load can take several minutes |
+| Backend fails during `testCompile` | Use `start-local.ps1` or run Maven with `-Dmaven.test.skip=true` for local startup |
 | `401 Unauthorized` | Include `X-API-Key` from `/api/v1/auth/login` |
 | Slow first Amharic response | Expected on first model warm-up (NLLB cold-load) |
 | Missing embeddings model | Run `ollama pull nomic-embed-text` |
 | RAG not rebuilding after grounding changes | Delete `data/vector-store.json` and restart backend |
-| Compose health checks timeout | Check service logs: `docker logs <container>` – increase `start_period` if needed |
-| PostgreSQL connection fails (test/prod) | Verify `docker logs pathboot-postgres-test` and `SPRING_DATASOURCE_*` env vars match |
-| Frontend cannot reach backend | Verify `VITE_API_BASE_URL` matches backend container URL in Compose override |
-
-## Profiled Startup Dependencies
-
-When using Docker Compose, startup is health-gated to prevent cascading failures:
-
-```
-Ollama (90s start_period)
-   ↓
-   └─ NLLB (180s start_period)
-   ↓
-   └─ Backend (waits for both healthy, 60s startup)
-   ↓
-   └─ Frontend (waits for backend healthy)
-```
-
-Check individual service health:
-```powershell
-# Ollama
-docker exec pathboot-ollama curl -f http://localhost:11434/api/tags
-
-# NLLB
-docker exec pathboot-nllb curl -f http://localhost:5000/health
-
-# Backend
-docker exec pathboot-backend curl -f http://localhost:8080/actuator/health
-
-# Frontend
-docker exec pathboot-frontend curl -f http://localhost:80
-```
 
 ## Documentation Map
 
