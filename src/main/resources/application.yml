@@ -1,4 +1,6 @@
 spring:
+  profile:
+    application-local
   application:
     name: pathboot-pi
   # ─── Profile-Specific Database and JPA Settings ────────────────────────────

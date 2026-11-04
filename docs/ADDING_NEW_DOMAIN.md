@@ -6,8 +6,8 @@
 ## Before You Start
 
 Make sure the local stack is working first:
-- `README.md` for run commands
-- `DOCUMENTATION.md` for interaction flow
+- `README.md` for setup and run commands
+- `pathboot-architecture.d2` or `PathBoot_Architecture.png` for the architecture view
 
 If runtime services are unavailable (Ollama/NLLB), classification and end-to-end tests may be harder to validate manually.
 
@@ -128,5 +128,4 @@ These stay unchanged because they are already domain-agnostic.
 ## Related Docs
 
 - `README.md`
-- `DOCUMENTATION.md`
-- `PATHBOOT_DOCS.md`
+- `GETTING_STARTED_BEGINNER.md`

@@ -1,19 +1,56 @@
-# PathBoot PI - Multilingual Domain Q&A Assistant
+# PathBoot PI - Standard Setup and Operations Guidelines
 
-PathBoot PI is a Spring Boot service that answers questions about Norwegian Tax, NAV, and Immigration in English, Amharic, and Norwegian.
+PathBoot PI is a Spring Boot-based multilingual Q&A assistant designed to explore how a practical solution could help users find information about Norwegian tax, NAV, and immigration services in English, Amharic, and Norwegian.
 
-It runs fully local with:
+This is primarily an experimental and exploratory project: it models a real-world problem and tests whether a local-first, grounded AI workflow can support multilingual public-service guidance. The current grounding data is synthetic and fabricated for prototype purposes, so this project should be understood as a proof of concept and research-oriented implementation rather than a production-ready public service.
+
+This document serves as the operational guide for setup, experimentation, testing, and environment-based execution across local, test, and production-like configurations.
+
+## Project Objective
+
+The main objective of PathBoot PI is to model and evaluate a solution for a real-world access problem: helping people navigate complex public-service information across language barriers and fragmented knowledge sources.
+
+Key goals:
+- explore how multilingual Q&A can support users with different language needs
+- model a domain-grounded AI workflow for tax, NAV, and immigration topics
+- test whether retrieval, translation, and LLM orchestration can improve answer quality
+- create a customizable foundation for future real-world deployment with real data sources
+
+## Current Limitations
+
+This project is intentionally exploratory. The grounding data used in the current implementation is fabricated and synthetic, which means the system is designed to validate architecture, workflow, and feasibility rather than provide official or production-grade answers.
+
+Important limitations:
+- the current knowledge base is not a real official source of truth
+- answer quality depends on synthetic sample data rather than verified public-domain content
+- the project does not yet represent a production-ready public service
+- additional domain data, validation, and governance are required before it can be used in a real environment
+
+## Scope
+
+This guide covers:
+- local development setup
+- test environment execution
+- production deployment configuration
+- Docker-based execution by profile
+- authentication and API verification
+- troubleshooting and operational notes
+
+## Runtime Components
+
+PathBoot PI runs with the following services:
 - Ollama (`mistral`) for chat and classification support
 - Ollama (`nomic-embed-text`) for RAG embeddings
 - NLLB (`facebook/nllb-200-distilled-600M`) for Amharic <-> English translation
-- SQLite for persistence
+- SQLite in local mode
+- PostgreSQL in test and production modes
 
 ## Table of Contents
 
 1. [What Runs Where](#what-runs-where)
 2. [Prerequisites](#prerequisites)
-3. [Quick Start (Automated - Recommended)](#quick-start-automated---recommended)
-4. [Quick Start (Manual)](#quick-start-manual)
+3. [Standard Environment Guidelines](#standard-environment-guidelines)
+4. [Quick Start (Standard Local Development)](#quick-start-standard-local-development)
 5. [Manual API Testing](#manual-api-testing)
 6. [Service Interaction Flow](#service-interaction-flow)
 7. [Authentication](#authentication)
@@ -21,6 +58,8 @@ It runs fully local with:
 9. [Configuration](#configuration)
 10. [Run Tests](#run-tests)
 11. [Troubleshooting](#troubleshooting)
+12. [Documentation Map](#documentation-map)
+13. [Beginner Guide](#beginner-guide)
 
 ## What Runs Where
 
@@ -51,7 +90,135 @@ ollama pull mistral
 ollama pull nomic-embed-text
 ```
 
-## Quick Start (Automated - Recommended)
+## Standard Environment Guidelines
+
+This project supports three Spring profiles:
+
+- `local` – SQLite + local Ollama/NLLB for development
+- `test` – PostgreSQL + QA/integration configuration
+- `prod` – PostgreSQL + hardened production settings
+
+Use the profile that matches the environment. Do not use production settings in local development and do not use local SQLite in production.
+
+### Local environment (`local`)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-local.ps1
+```
+
+Manual run:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "local"
+.\mvnw.cmd "-Dmaven.test.skip=true" spring-boot:run
+```
+
+### Test environment (`test`)
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "test"
+$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5432/pathboot_test"
+$env:SPRING_DATASOURCE_USERNAME = "pathboot_test"
+$env:SPRING_DATASOURCE_PASSWORD = "pathboot_test_password"
+.\mvnw.cmd spring-boot:run
+```
+
+### Production environment (`prod`)
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "prod"
+$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://host:5432/pathboot_prod"
+$env:SPRING_DATASOURCE_USERNAME = "pathboot"
+$env:SPRING_DATASOURCE_PASSWORD = "<secure-password>"
+$env:PATHBOOT_API_KEY_1 = "<secure-key-1>"
+$env:PATHBOOT_API_KEY_2 = "<secure-key-2>"
+$env:PATHBOOT_ADMIN_PASSWORD = "<admin-password>"
+$env:PATHBOOT_USER_PASSWORD = "<user-password>"
+
+.\mvnw.cmd "-DskipTests" package
+java -jar .\target\pathboot-pi-1.0.0.jar
+```
+
+Production notes:
+- PostgreSQL is required
+- Swagger/OpenAPI is disabled
+- API keys are enforced
+- schema is validated, not auto-migrated
+- secrets must be loaded from environment variables or a secret manager
+
+### Docker-based profile execution
+
+This repo now includes one Dockerfile per profile:
+
+- `Dockerfile.local`
+- `Dockerfile.test`
+- `Dockerfile.prod`
+
+Each file sets the corresponding Spring profile as the default, so you can build and run a profile-specific image without passing the profile in every command.
+
+#### 1) Build the image for a profile
+
+```powershell
+docker build -f Dockerfile.local -t pathboot-pi-local .
+docker build -f Dockerfile.test -t pathboot-pi-test .
+docker build -f Dockerfile.prod -t pathboot-pi-prod .
+```
+
+#### 2) Run in `local` profile
+
+This profile is intended for local development using SQLite and local Ollama/NLLB services.
+
+```powershell
+docker run --rm -it \
+  -p 8080:8080 \
+  -e SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  -e NLLB_SERVER_BASE_URL=http://host.docker.internal:5000 \
+  -v "${PWD}\data:/app/data" \
+  pathboot-pi-local
+```
+
+Notes:
+- `host.docker.internal` is used so the container can reach services running on the host machine.
+- SQLite data is stored in the local `data` directory.
+
+#### 3) Run in `test` profile
+
+This profile uses PostgreSQL for QA or integration testing.
+
+```powershell
+docker run --rm -it \
+  -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pathboot_test \
+  -e SPRING_DATASOURCE_USERNAME=pathboot_test \
+  -e SPRING_DATASOURCE_PASSWORD=pathboot_test_password \
+  pathboot-pi-test
+```
+
+#### 4) Run in `prod` profile
+
+This profile is for deployment and requires real secrets. Do not hardcode credentials in Docker commands.
+
+```powershell
+docker run --rm -it \
+  -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pathboot_prod \
+  -e SPRING_DATASOURCE_USERNAME=pathboot \
+  -e SPRING_DATASOURCE_PASSWORD=<secure-password> \
+  -e PATHBOOT_API_KEY_1=<secure-key-1> \
+  -e PATHBOOT_API_KEY_2=<secure-key-2> \
+  -e PATHBOOT_ADMIN_PASSWORD=<admin-password> \
+  -e PATHBOOT_USER_PASSWORD=<user-password> \
+  -e FRONTEND_URL=https://your-frontend.example.com \
+  pathboot-pi-prod
+```
+
+Important production notes:
+- Swagger is disabled in `prod`
+- PostgreSQL is required
+- `FRONTEND_URL` should be set for CORS
+- secrets must come from environment variables or a secret manager
+
+## Quick Start (Standard Local Development)
 
 From the project root (`PathBootPI/`):
 
@@ -59,78 +226,16 @@ From the project root (`PathBootPI/`):
 powershell -ExecutionPolicy Bypass -File .\start-local.ps1
 ```
 
-Optional: force NLLB image rebuild:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start-local.ps1 -RebuildNllb
-```
-
-Stop services:
+To stop services:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\stop-local.ps1
 ```
 
-Run API smoke test (login + protected chat call):
+Smoke test:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\smoke-api.ps1
-```
-
-## Quick Start (Manual)
-
-Use this startup order:
-1. Ollama
-2. NLLB
-3. Backend
-4. Frontend
-
-### 1) Start Ollama
-
-```powershell
-ollama serve
-```
-
-In another terminal, verify:
-
-```powershell
-Invoke-RestMethod -Method Get -Uri "http://localhost:11434/api/tags"
-```
-
-### 2) Start NLLB translation service
-
-From `pathboot-pi`:
-
-```powershell
-docker build -f Dockerfile.nllb -t pathboot-nllb .
-docker rm -f pathboot-nllb 2>$null
-docker run -d --name pathboot-nllb -p 5000:5000 pathboot-nllb
-```
-
-Verify health:
-
-```powershell
-Invoke-RestMethod -Method Get -Uri "http://localhost:5000/health"
-```
-
-### 3) Start backend (`pathboot-pi`)
-
-```powershell
-.\mvnw.cmd spring-boot:run
-```
-
-If your local JDK is newer and Maven fails in `testCompile`, run:
-
-```powershell
-.\mvnw.cmd "-Dmaven.test.skip=true" "-Dspring-boot.run.profiles=local" spring-boot:run
-```
-
-### 4) Start frontend (`pathboot-ui`)
-
-```powershell
-cd ..\pathboot-ui
-npm install
-npm run dev
 ```
 
 ## Manual API Testing
@@ -228,12 +333,12 @@ Swagger UI:
 
 ### Configuration Files
 
-| File | Purpose | Profile |
-|------|---------|---------|
-| `src/main/resources/application.yml` | Shared base config (Ollama, NLLB, API, Swagger) | All |
-| `src/main/resources/application-local.yml` | SQLite datasource, dev logging | `local` |
-| `src/main/resources/application-test.yml` | PostgreSQL, test logging, in-memory RAG | `test` |
-| `src/main/resources/application-prod.yml` | PostgreSQL, strict security, minimal logging | `prod` |
+| File                                       | Purpose                                         | Profile |
+|--------------------------------------------|-------------------------------------------------|---------|
+| `src/main/resources/application.yml`       | Shared base config (Ollama, NLLB, API, Swagger) | All     |
+| `src/main/resources/application-local.yml` | SQLite datasource, dev logging                  | `local` |
+| `src/main/resources/application-test.yml`  | PostgreSQL, test logging, in-memory RAG         | `test`  |
+| `src/main/resources/application-prod.yml`  | PostgreSQL, strict security, minimal logging    | `prod`  |
 
 ### Important Configuration Keys
 
@@ -305,7 +410,22 @@ Important keys:
 
 ## Documentation Map
 
-- High-level index: `PATHBOOT_DOCS.md`
-- Technical deep dive: `DOCUMENTATION.md`
-- Technology rationale: `TECHNOLOGY_CHOICES.md`
-- Domain extension guide: `ADDING_NEW_DOMAIN.md`
+Keep the documentation set small and focused:
+
+- Main project guide: `README.md`
+- Clone/setup/run guide: `docs/CLONE_SETUP_RUN.md`
+- Beginner-friendly setup guide: `docs/GETTING_STARTED_BEGINNER.md`
+- Domain extension guide: `docs/ADDING_NEW_DOMAIN.md`
+- Architecture diagram: `docs/pathboot-architecture.d2` and `docs/PathBoot_Architecture.png`
+
+## Beginner-Friendly Guide
+
+For a simpler setup flow, see:
+
+- `docs/GETTING_STARTED_BEGINNER.md`
+
+## From Clone to Running
+
+For a complete end-to-end setup from a fresh machine, see:
+
+- `docs/CLONE_SETUP_RUN.md`
