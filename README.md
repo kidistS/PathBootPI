@@ -414,6 +414,7 @@ Keep the documentation set small and focused:
 
 - Main project guide: `README.md`
 - Clone/setup/run guide: `docs/CLONE_SETUP_RUN.md`
+- Run without Docker: `docs/RUN_WITHOUT_DOCKER.md`
 - Beginner-friendly setup guide: `docs/GETTING_STARTED_BEGINNER.md`
 - Domain extension guide: `docs/ADDING_NEW_DOMAIN.md`
 - Architecture diagram: `docs/pathboot-architecture.d2` and `docs/PathBoot_Architecture.png`
@@ -429,3 +430,9 @@ For a simpler setup flow, see:
 For a complete end-to-end setup from a fresh machine, see:
 
 - `docs/CLONE_SETUP_RUN.md`
+
+## Running Without Docker
+
+If you want to run the backend directly on your local machine without Docker, see:
+
+- `docs/RUN_WITHOUT_DOCKER.md`
